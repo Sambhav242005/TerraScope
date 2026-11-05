@@ -1,0 +1,11 @@
+﻿import {chromium,expect} from '@playwright/test';import {createIntervention} from '../src/flood/intervention.ts';import fs from 'node:fs';
+const b=await chromium.launch({channel:'msedge',headless:true});const c=await b.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+const items=[createIntervention('solar_array',{lat:25.685,lon:85.145}),createIntervention('wind_turbine',{lat:25.684,lon:85.148})];
+await p.addInitScript(items=>localStorage.setItem('terrascope-v1',JSON.stringify({version:1,area:{lat:25.71,lon:85.16},radius:4,checks:[],custom:[],scenario:{rainScale:1,loss:.35,lag:8},interventions:items})),items);
+try{await p.goto('http://127.0.0.1:4173');await expect(p.locator('.intervention-pin.solar_array')).toHaveCount(1);await p.waitForTimeout(8000);await p.locator('.proposal-controls summary').click();await p.locator('.proposal-controls details button').last().click();await p.locator('.proposal-controls summary').click();
+await expect(p.getByRole('region',{name:'Placement evidence check',exact:true})).toContainText('Wind Turbine');
+await p.getByRole('button',{name:'Close placement review',exact:true}).click();
+await p.getByLabel('Terrain bookmark',{exact:true}).selectOption('floodplain');await p.waitForTimeout(700);
+await p.locator('.proposal-controls summary').click();await p.locator('.proposal-controls details button').first().click();await p.locator('.proposal-controls summary').click();await p.getByRole('button',{name:'Close placement review',exact:true}).click();await p.waitForTimeout(1000);
+await p.screenshot({path:'artifacts/renewables-3d.png'});await p.getByRole('button',{name:'2D map',exact:true}).click();await p.waitForTimeout(1000);await p.screenshot({path:'artifacts/renewables-topdown.png'});await p.locator('.intervention-pin.wind_turbine').click();await p.getByRole('button',{name:'Delete proposal',exact:true}).click();await expect(p.locator('.intervention-pin.wind_turbine')).toHaveCount(0);
+expect(errors).toEqual([]);fs.writeFileSync('artifacts/renewables-3d-report.json',JSON.stringify({errors,physicalPhone:false},null,2));}finally{await c.close();await b.close();}

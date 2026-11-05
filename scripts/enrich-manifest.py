@@ -1,0 +1,9 @@
+import json,hashlib
+from pathlib import Path
+p=Path('public/data/manifest.json');m=json.loads(p.read_text())
+for d in m:
+ d['crs']='EPSG:4326';d['coverageStart']='2024-09-25' if d['id']!='assets' else None;d['coverageEnd']='2024-10-03' if d['id']!='assets' else None;d['issueTime']=None;d['availableBeforeEvent']=False;d['verticalDatum']='not applicable';d['retrieved']='2026-11-04';d['schemaVersion']=1
+ if d['id']=='rainfall':d.update(provider='Copernicus ERA5 via Open-Meteo',model='ERA5',units='mm per hour',resolution='0.25 degree, hourly',timezone='Asia/Kolkata',license='CC BY 4.0 data; Open-Meteo free API non-commercial terms',processing='Hourly precipitation summed over IST calendar days; no catchment averaging.',uncertainty='Reanalysis estimate; no local calibration or error bounds. Sample grid cell, not catchment rainfall.',coordinates={'requested':[84.25,26.5],'returned':[84.25,26.5]})
+ elif d['id']=='discharge':d.update(provider='Copernicus GloFAS via Open-Meteo',model='GloFAS v4 seamless default (provider documentation); exact upstream run not supplied',units='m3/s',resolution='approximately 0.05 degree; daily',timezone='GMT/UTC',license='CC BY 4.0 data; Open-Meteo free API non-commercial terms',processing='Daily historical modeled discharge retained unchanged.',uncertainty='Not a gauge record. Selected river cell not independently verified. No predictive skill established.',coordinates={'requested':[85.12,25.75],'returned':[85.125,25.775002]})
+ else:d.update(provider='OpenStreetMap contributors',model='Current map extract',units='WGS84 degrees',resolution='Mapped feature coordinates; positional accuracy unknown',timezone='not applicable',license='Open Database License 1.0 (ODbL)',uncertainty='Nine mapped amenities in bounded extract. Incomplete and unverified; current mapping does not establish 2024 presence. Way coordinates are representative points, not verified entrances.')
+p.write_text(json.dumps(m,indent=2))

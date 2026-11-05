@@ -1,0 +1,152 @@
+[
+  {
+    "id": "rainfall",
+    "url": "https://archive-api.open-meteo.com/v1/archive?latitude=26.5&longitude=84.25&start_date=2024-09-25&end_date=2024-10-03&hourly=precipitation&models=era5&timezone=Asia%2FKolkata",
+    "sha256": "d88ad72924eba5e0e4f911a7054fd22e1e999c45681fed3382fd2b00327e8672",
+    "retrieved": "2026-11-04",
+    "status": "downloaded",
+    "size": 5457,
+    "crs": "EPSG:4326",
+    "coverageStart": "2024-09-25",
+    "coverageEnd": "2024-10-03",
+    "issueTime": null,
+    "availableBeforeEvent": false,
+    "verticalDatum": "not applicable",
+    "schemaVersion": 1,
+    "provider": "Copernicus ERA5 via Open-Meteo",
+    "model": "ERA5",
+    "units": "mm per hour",
+    "resolution": "0.25 degree, hourly",
+    "timezone": "Asia/Kolkata",
+    "license": "CC BY 4.0 data; Open-Meteo free API non-commercial terms",
+    "processing": "Hourly precipitation summed over IST calendar days; no catchment averaging.",
+    "uncertainty": "Reanalysis estimate; no local calibration or error bounds. Sample grid cell, not catchment rainfall.",
+    "coordinates": {
+      "requested": [
+        84.25,
+        26.5
+      ],
+      "returned": [
+        84.25,
+        26.5
+      ]
+    }
+  },
+  {
+    "id": "discharge",
+    "url": "https://flood-api.open-meteo.com/v1/flood?latitude=25.75&longitude=85.12&start_date=2024-09-25&end_date=2024-10-03&daily=river_discharge",
+    "sha256": "2bff54ab9cefbb02401b1d6f71e9718a33ab6e86e9dacb4eb10af3a04c7bf586",
+    "retrieved": "2026-11-04",
+    "status": "downloaded",
+    "crs": "EPSG:4326",
+    "coverageStart": "2024-09-25",
+    "coverageEnd": "2024-10-03",
+    "issueTime": null,
+    "availableBeforeEvent": false,
+    "verticalDatum": "not applicable",
+    "schemaVersion": 1,
+    "provider": "Copernicus GloFAS via Open-Meteo",
+    "model": "GloFAS v4 seamless default (provider documentation); exact upstream run not supplied",
+    "units": "m3/s",
+    "resolution": "approximately 0.05 degree; daily",
+    "timezone": "GMT/UTC",
+    "license": "CC BY 4.0 data; Open-Meteo free API non-commercial terms",
+    "processing": "Daily historical modeled discharge retained unchanged.",
+    "uncertainty": "Not a gauge record. Selected river cell not independently verified. No predictive skill established.",
+    "coordinates": {
+      "requested": [
+        85.12,
+        25.75
+      ],
+      "returned": [
+        85.125,
+        25.775002
+      ]
+    }
+  },
+  {
+    "id": "assets",
+    "url": "https://api.openstreetmap.org/api/0.6/map?bbox=85.14,25.68,85.19,25.73",
+    "sha256": "18c10a4b8f24a0d45e39581a35da77c0ef0984a669f2e2483e92e518a09582f4",
+    "rawSha256": "46dcab0979f5f910b1b56ec183c13c7d3dfb84f7b3e67d4b8d701be739c98051",
+    "retrieved": "2026-11-04",
+    "status": "downloaded",
+    "bounds": [
+      85.14,
+      25.68,
+      85.19,
+      25.73
+    ],
+    "processing": "Amenities filtered. Ways use mean vertex coordinates. Only name and amenity tags retained.",
+    "crs": "EPSG:4326",
+    "coverageStart": null,
+    "coverageEnd": null,
+    "issueTime": null,
+    "availableBeforeEvent": false,
+    "verticalDatum": "not applicable",
+    "schemaVersion": 1,
+    "provider": "OpenStreetMap contributors",
+    "model": "Current map extract",
+    "units": "WGS84 degrees",
+    "resolution": "Mapped feature coordinates; positional accuracy unknown",
+    "timezone": "not applicable",
+    "license": "Open Database License 1.0 (ODbL)",
+    "uncertainty": "Nine mapped amenities in bounded extract. Incomplete and unverified; current mapping does not establish 2024 presence. Way coordinates are representative points, not verified entrances."
+  },
+  {
+    "id": "flow-history",
+    "url": "https://flood-api.open-meteo.com/v1/flood?latitude=25.75&longitude=85.12&start_date=2015-01-01&end_date=2024-12-31&daily=river_discharge",
+    "sha256": "0a466f81b6633a3a91606e6ca69f2c6b915ef4dd8e1adad234a3d65c2280e791",
+    "retrieved": "2026-11-04T15:16:02.335801+00:00",
+    "status": "downloaded",
+    "coverageStart": "2015-01-01",
+    "coverageEnd": "2024-12-31",
+    "provider": "Open-Meteo / Copernicus",
+    "license": "CC BY 4.0 data; free API non-commercial terms",
+    "model": "GloFAS v4 seamless default; exact upstream run not supplied",
+    "resolution": "0.05 degree / daily",
+    "units": "m3/s",
+    "timezone": "UTC",
+    "crs": "EPSG:4326",
+    "returnedCoordinates": [
+      85.125,
+      25.775002
+    ],
+    "uncertainty": "Sample-cell estimates. No gauge validation, river assignment verification, flood depth or extent. Historical values are not advance forecasts."
+  },
+  {
+    "id": "rain-history",
+    "url": "https://archive-api.open-meteo.com/v1/archive?latitude=26.5&longitude=84.25&start_date=2015-01-01&end_date=2024-12-31&daily=precipitation_sum&models=era5&timezone=Asia%2FKolkata",
+    "sha256": "2c97ce623d284d6081756144b1c3309a6e02b0747cebb9fab3df8b76ad9abc70",
+    "retrieved": "2026-11-04T15:16:02.483545+00:00",
+    "status": "downloaded",
+    "coverageStart": "2015-01-01",
+    "coverageEnd": "2024-12-31",
+    "provider": "Open-Meteo / Copernicus",
+    "license": "CC BY 4.0 data; free API non-commercial terms",
+    "model": "ERA5",
+    "resolution": "0.25 degree / daily",
+    "units": "mm/day",
+    "timezone": "Asia/Kolkata",
+    "crs": "EPSG:4326",
+    "returnedCoordinates": [
+      84.25,
+      26.5
+    ],
+    "uncertainty": "Sample-cell estimates. No gauge validation, river assignment verification, flood depth or extent. Historical values are not advance forecasts."
+  },
+  {
+    "id": "scene-geometry",
+    "url": "https://api.openstreetmap.org/api/0.6/map?bbox=85.14,25.68,85.19,25.73",
+    "sha256": "fcc1a368ef5d679e199c60d76bb8893f820786431fc4db047afeb0a0da7c0d25",
+    "retrieved": "2026-11-04",
+    "status": "downloaded; derived visual geometry",
+    "license": "ODbL, OpenStreetMap contributors",
+    "units": "WGS84 degrees; illustrative object heights in metres",
+    "resolution": "Mapped footprints, not surveyed 3D assets",
+    "timezone": "not applicable",
+    "model": "OSM ways with explicit visual-height assumptions",
+    "uncertainty": "27 building footprints, all extruded to illustrative 6 m. Decorative trees placed within mapped woods; not observed tree locations. No river depths or flood extent.",
+    "processing": "Closed building/water/wood ways and road/river lines retained; no personal tags. Seeded decorative trees. scripts/build-scene.py"
+  }
+]

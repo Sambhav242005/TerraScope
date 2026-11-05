@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-02T15:34:26.385Z",
+  "environment": "Headless Edge on development Windows desktop; mobile viewport emulation, not a physical phone.",
+  "report": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "fps": 75,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibleRepresentatives": 54,
+      "species": 10,
+      "checks": "habitat, pause, follow/return, walk, reset, extinction, reduced motion, overflow, runtime errors passed"
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "fps": 75,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibleRepresentatives": 54,
+      "species": 10,
+      "checks": "habitat, pause, follow/return, walk, reset, extinction, reduced motion, overflow, runtime errors passed"
+    }
+  ],
+  "fallback": "Accessible journal verified with WebGL disabled"
+}

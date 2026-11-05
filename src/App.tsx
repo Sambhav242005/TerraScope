@@ -1,0 +1,2146 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Map,
+  Layers,
+  GitCompareArrows,
+  ClipboardCheck,
+  FileText,
+  Mountain,
+  CloudRain,
+  Waves,
+  Building2,
+  MapPin,
+  Play,
+  Pause,
+  ChevronRight,
+  ChevronLeft,
+  ArrowUpRight,
+  Download,
+  Droplets,
+  X,
+  Info,
+  Check,
+  Plus,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  RotateCcw,
+  ExternalLink,
+  Menu,
+  Sun,
+  Wind,
+  Trees,
+  Sparkles,
+} from "lucide-react";
+import MapView from "./flood/MapView";
+import RiverHistory from "./flood/RiverHistory";
+import WorldMap from "./flood/WorldMap";
+import {
+  parseAssets,
+  distanceKm,
+  runoff,
+  draftPlan,
+  type Asset,
+  type Check as FieldCheck,
+  type Rain,
+  type Flow,
+  type Scenario,
+} from "./flood/model";
+import {
+  DEFAULT_SCREENING_CONFIG,
+  candidateMapFeatures,
+  configHash,
+  fetchOsmWaterJson,
+  fetchTerrariumTileRGBA,
+  loadStoredWater,
+  loadStorageRun,
+  runStorageScreening,
+  saveStorageRun,
+  waterMapFeatures,
+  type ScreeningRun,
+  type StoredCandidate,
+  type StoredWater,
+} from "./flood/storage/storageSearch";
+import {
+  type Intervention,
+  type PlacementTool,
+  createIntervention,
+  validateIntervention,
+  summarizeInterventions,
+} from "./flood/intervention";
+import { getEnsoContextForYear, getEnsoColor } from "./flood/enso";
+import PlaceSearch, {type MapTarget} from "./flood/PlaceSearch";
+import {placementBlock} from "./flood/placementAdmission";
+import PlacementReview from "./flood/PlacementReview";
+import { usePlacementChecks } from "./flood/usePlacementChecks";
+import "./style.css";
+type Tab =
+  | "3D explorer"
+  | "River history"
+  | "Explore"
+  | "Compare"
+  | "Field checks"
+  | "Response plan";
+type Saved = {
+  version: 1;
+  area: { lat: number; lon: number };
+  radius: number;
+  checks: FieldCheck[];
+  scenario: Scenario;
+  custom: Asset[];
+  interventions?: Intervention[];
+  mapTarget?: MapTarget;
+};
+const initial: Saved = {
+  version: 1,
+  area: { lat: 25.71, lon: 85.16 },
+  radius: 4,
+  checks: [],
+  scenario: { rainScale: 1, loss: 0.35, lag: 8 },
+  custom: [],
+  interventions: [],
+};
+function load(): Saved {
+  try {
+    const v = JSON.parse(localStorage.getItem("terrascope-v1") ?? "null");
+    if (
+      v?.version !== 1 ||
+      !Number.isFinite(v.area?.lat) ||
+      Math.abs(v.area.lat) > 85 ||
+      !Number.isFinite(v.area?.lon) ||
+      Math.abs(v.area.lon) > 180 ||
+      !Number.isFinite(v.radius) ||
+      v.radius < 0.5 ||
+      v.radius > 10 ||
+      !Array.isArray(v.checks) ||
+      !Array.isArray(v.custom)
+    )
+      return initial;
+    runoff([0], v.scenario);
+    return {
+      ...v,
+      mapTarget: typeof v.mapTarget?.label === "string" && v.mapTarget.lat === v.area.lat && v.mapTarget.lon === v.area.lon ? v.mapTarget : undefined,
+      checks: v.checks.filter(
+        (c: FieldCheck) =>
+          typeof c.id === "string" &&
+          typeof c.assetId === "string" &&
+          typeof c.note === "string" &&
+          typeof c.assignee === "string" &&
+          ["To verify", "Evidence recorded", "Reviewed"].includes(c.status),
+      ),
+      custom: v.custom.filter(
+        (a: Asset) =>
+          typeof a.id === "string" &&
+          typeof a.name === "string" &&
+          Number.isFinite(a.lat) &&
+          Number.isFinite(a.lon) &&
+          Math.abs(a.lat) <= 85 &&
+          Math.abs(a.lon) <= 180,
+      ),
+      interventions: Array.isArray(v.interventions)
+        ? v.interventions.filter(validateIntervention)
+        : [],
+    };
+  } catch {
+    return initial;
+  }
+}
+function Spark({
+  values,
+  color = "#21849a",
+  bars = false,
+  comparison,
+}: {
+  values: (number | null)[];
+  color?: string;
+  bars?: boolean;
+  comparison?: number[];
+}) {
+  const max = Math.max(
+    1,
+    ...values.filter((n): n is number => n !== null),
+    ...(comparison ?? []),
+  );
+  const path = (v: (number | null)[]) =>
+    v
+      .map((n, i) =>
+        n === null
+          ? ""
+          : `${i === 0 || v[i - 1] === null ? "M" : "L"}${(i / Math.max(1, v.length - 1)) * 400},${73 - (n / max) * 62}`,
+      )
+      .join(" ");
+  return (
+    <svg
+      className="spark"
+      viewBox="0 0 400 80"
+      role="img"
+      aria-label={
+        bars
+          ? "Rainfall time series"
+          : "Time series; values also available in data table"
+      }
+    >
+      <path d="M0 74H400" stroke="#dbe2dc" />
+      {bars ? (
+        values.map((n, i) => (
+          <rect
+            key={i}
+            x={(i / values.length) * 400}
+            y={73 - ((n ?? 0) / max) * 62}
+            width={Math.max(1, 400 / values.length - 2)}
+            height={((n ?? 0) / max) * 62}
+            rx="1"
+            fill={color}
+          />
+        ))
+      ) : (
+        <>
+          <path
+            d={
+              values.some((v) => v !== null)
+                ? `${path(values)} L400 74 L0 74 Z`
+                : ""
+            }
+            fill={color}
+            opacity=".08"
+          />
+          <path d={path(values)} stroke={color} strokeWidth="2.5" fill="none" />
+          {comparison && (
+            <path
+              d={path(comparison)}
+              stroke="#a98045"
+              strokeWidth="2"
+              strokeDasharray="5 3"
+              fill="none"
+            />
+          )}
+        </>
+      )}
+    </svg>
+  );
+}
+const date = (s: string) =>
+  new Date(s + "T12:00:00Z").toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  });
+const fmt = (n: number | null | undefined) =>
+  n == null
+    ? "Unavailable"
+    : n.toLocaleString("en-GB", { maximumFractionDigits: 1 });
+const waterNote = (w: StoredCandidate["waterEvidence"]) =>
+  w.status === "overlaps"
+    ? `Overlaps mapped water (${w.features.length})`
+    : w.status === "none-mapped"
+      ? "No mapped water inside"
+      : "Water evidence unavailable";
+export default function App() {
+  const [saved, setSaved] = useState(load),
+    [tab, setTab] = useState<Tab>("3D explorer"),
+    [rain, setRain] = useState<Rain | null>(null),
+    [flow, setFlow] = useState<Flow | null>(null),
+    [osm, setOsm] = useState<Asset[]>([]),
+    [manifest, setManifest] = useState<
+      Array<{
+        id: string;
+        url: string;
+        sha256?: string;
+        retrieved: string;
+        status: string;
+        units?: string;
+        resolution?: string;
+        timezone?: string;
+        model?: string;
+        uncertainty?: string;
+      }>
+    >([]),
+    [dataErrors, setDataErrors] = useState<string[]>([]),
+    [day, setDay] = useState(4),
+    [playing, setPlaying] = useState(false),
+    [selected, setSelected] = useState<string | null>(null),
+    [sources, setSources] = useState(false),
+    [showTable, setShowTable] = useState(false),
+    [showAssets, setShowAssets] = useState(true),
+    [terrain, setTerrain] = useState(true),
+    [layers, setLayers] = useState(false),
+    [search, setSearch] = useState(""),
+    [draft, setDraft] = useState(() => {
+      try {
+        return localStorage.getItem("terrascope-draft") ?? "";
+      } catch {
+        return "";
+      }
+    }),
+    [ran, setRan] = useState(false),
+    [notice, setNotice] = useState(""),
+    [adding, setAdding] = useState(false),
+    [newName, setNewName] = useState(""),
+    [note, setNote] = useState(""),
+    [assignee, setAssignee] = useState(""),
+    [activePlacementTool, setActivePlacementTool] = useState<PlacementTool>("select"),
+    [selectedIntervention, setSelectedIntervention] = useState<string | null>(null),
+    [showInterventions, setShowInterventions] = useState(true),
+    [coordinatePlacement, setCoordinatePlacement] = useState(false),
+    [placementLat, setPlacementLat] = useState("25.71"),
+    [placementLon, setPlacementLon] = useState("85.16");
+  const proposalItems = useMemo(() => saved.interventions ?? [], [saved.interventions]);
+  const [mapTarget, setMapTarget] = useState<MapTarget | null>(()=>saved.mapTarget??null);
+  const [placementError, setPlacementError] = useState("");
+  const placementReview = usePlacementChecks(proposalItems, saved.area);
+  function chooseArea(target:MapTarget) { storageAbort.current?.abort();lastStorageRun.current=null;setStorageRun(null);setStorageWater(null);setStorageBusy(false);setPlacementLat(String(target.lat));setPlacementLon(String(target.lon));setMapTarget(target);update({area:{lat:target.lat,lon:target.lon},mapTarget:target});setActivePlacementTool('select');setSelectedIntervention(null);setSelectedStorage(null);setPlacementError(''); }
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [storageRun, setStorageRun] = useState<ScreeningRun | null>(null),
+    [storageWater, setStorageWater] = useState<StoredWater | null>(null),
+    [storageBusy, setStorageBusy] = useState(false),
+    [storagePhase, setStoragePhase] = useState(""),
+    [showCandidates, setShowCandidates] = useState(true),
+    [showWaterLayer, setShowWaterLayer] = useState(true),
+    [selectedStorage, setSelectedStorage] = useState<string | null>(null);
+  const storageAbort = useRef<AbortController | null>(null),
+    lastStorageRun = useRef<{ hash: string; lat: number; lon: number } | null>(
+      null,
+    ),
+    storageTiles = useRef<Map<string, Uint8ClampedArray>>(
+      new globalThis.Map(),
+    );
+  useEffect(() => {
+    try {
+      localStorage.setItem("terrascope-draft", draft);
+    } catch {}
+  }, [draft]);
+  const update = (p: Partial<Saved>) => setSaved((s) => ({ ...s, ...p }));
+  useEffect(() => {
+    document.title = "TerraScope · Flood preparedness";
+    let live = true;
+    const get = async (name: string, fn: (d: any) => void) => {
+      try {
+        const r = await fetch(`/data/${name}.json`);
+        if (!r.ok) throw Error();
+        const d = await r.json();
+        if (live) fn(d);
+      } catch {
+        if (live) setDataErrors((e) => [...new Set([...e, name])]);
+      }
+    };
+    get("rainfall", (d) => {
+      if (
+        !Array.isArray(d.hourly?.precipitation) ||
+        d.hourly.precipitation.length !== 216 ||
+        d.hourly.precipitation.some(
+          (x: unknown) =>
+            x !== null &&
+            (typeof x !== "number" || !Number.isFinite(x) || x < 0),
+        )
+      )
+        throw Error();
+      setRain(d);
+    });
+    get("discharge", (d) => {
+      if (
+        !Array.isArray(d.daily?.river_discharge) ||
+        d.daily.river_discharge.length !== 9 ||
+        d.daily.river_discharge.some(
+          (x: unknown) =>
+            x !== null &&
+            (typeof x !== "number" || !Number.isFinite(x) || x < 0),
+        )
+      )
+        throw Error();
+      setFlow(d);
+    });
+    get("assets", (d) =>
+      setOsm(
+        parseAssets(d).filter((a) =>
+          ["school", "hospital", "clinic", "police", "fire_station"].includes(
+            a.kind,
+          ),
+        ),
+      ),
+    );
+    get("manifest", setManifest);
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("terrascope-v1", JSON.stringify(saved));
+    } catch {
+      setNotice(
+        "Storage unavailable. Export your workspace to keep this session.",
+      );
+    }
+  }, [saved]);
+  // Restore one previous screening session; water features stay where
+  // persistence kept them (`storedWater`) so saved workspaces stay bounded.
+  useEffect(() => {
+    const run = loadStorageRun();
+    if (!run) return;
+    setStorageRun(run);
+    lastStorageRun.current = {
+      hash: run.configHash,
+      lat: run.config.center.lat,
+      lon: run.config.center.lon,
+    };
+    const water = loadStoredWater();
+    if (water?.features.length) setStorageWater(water);
+  }, []);
+  function startStorageRun(next: { lat: number; lon: number }) {
+    storageAbort.current?.abort();
+    const controller = new AbortController();
+    storageAbort.current = controller;
+    setSelectedStorage(null);
+    setStorageBusy(true);
+    setStoragePhase("Terrain tiles…");
+    if (storageTiles.current.size > 120) storageTiles.current.clear();
+    runStorageScreening(
+      { center: next, ...DEFAULT_SCREENING_CONFIG },
+      {
+        signal: controller.signal,
+        fetchTile: fetchTerrariumTileRGBA,
+        fetchWaterJson: fetchOsmWaterJson,
+        tilesCache: storageTiles.current,
+        onProgress: (p) =>
+          setStoragePhase(
+            p.phase === "terrain"
+              ? `Terrain tiles ${p.tilesDone}/${p.tilesTotal}…`
+              : p.phase === "analysing"
+                ? "Screening depressions…"
+                : "Fetching mapped water…",
+          ),
+      },
+    )
+      .then((run) => {
+        if (controller.signal.aborted) return;
+        setStorageRun(run);
+        setStorageWater(run.water);
+        setStorageBusy(false);
+        setStoragePhase("");
+        lastStorageRun.current = {
+          hash: run.configHash,
+          lat: run.config.center.lat,
+          lon: run.config.center.lon,
+        };
+        if (!saveStorageRun(run))
+          setNotice(
+            "Storage analysis could not be saved on this device. Results will be lost when the tab closes.",
+          );
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setStorageBusy(false);
+        setStoragePhase("");
+        setNotice(
+          `Storage screening could not complete: ${String((err as Error).message ?? err)}`,
+        );
+      });
+  }
+  function cancelStorage() {
+    storageAbort.current?.abort();
+    setStorageBusy(false);
+    setStoragePhase("");
+    setNotice("Storage screening cancelled. No results were produced.");
+  }
+  // Screening starts automatically once the review centre settles (R15/R18);
+  // small moves (<~500 m or below config rounding) deliberately keep the
+  // previous run instead of re-fetching tiles for an identical analysis.
+  useEffect(() => {
+    const { lat, lon } = saved.area;
+    if (
+      !Number.isFinite(lat) ||
+      Math.abs(lat) > 85 ||
+      !Number.isFinite(lon) ||
+      Math.abs(lon) > 180
+    )
+      return;
+    const last = lastStorageRun.current;
+    if (
+      last &&
+      (distanceKm({ lat: last.lat, lon: last.lon }, { lat, lon }) * 1000 < 500 ||
+        configHash({ center: { lat, lon }, ...DEFAULT_SCREENING_CONFIG }) ===
+          last.hash)
+    )
+      return;
+    const timer = setTimeout(() => startStorageRun({ lat, lon }), 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved.area.lat, saved.area.lon]);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = setInterval(
+      () =>
+        setDay((d) => {
+          if (d >= 8) {
+            setPlaying(false);
+            return 8;
+          }
+          return d + 1;
+        }),
+      1200,
+    );
+    return () => clearInterval(timer);
+  }, [playing]);
+  useEffect(() => {
+    if (!sources && !showTable) return;
+    const old = document.activeElement as HTMLElement;
+    const dialog = dialogRef.current;
+    const items = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button,a,input,[tabindex="0"]',
+        ) ?? [],
+      );
+    items()[0]?.focus();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSources(false);
+        setShowTable(false);
+      }
+      if (e.key === "Tab") {
+        const a = items();
+        if (e.shiftKey && document.activeElement === a[0]) {
+          e.preventDefault();
+          a.at(-1)?.focus();
+        } else if (!e.shiftKey && document.activeElement === a.at(-1)) {
+          e.preventDefault();
+          a[0]?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => {
+      document.removeEventListener("keydown", handler);
+      old?.focus();
+    };
+  }, [sources, showTable]);
+  const assets = useMemo(() => [...osm, ...saved.custom], [osm, saved.custom]);
+  const nearby = useMemo(
+    () => assets.filter((a) => distanceKm(a, saved.area) <= saved.radius),
+    [assets, saved.area, saved.radius],
+  );
+  const visibleAssets = nearby.filter((a) =>
+    a.name.toLowerCase().includes(search.toLowerCase()),
+  );
+  const active = assets.find((a) => a.id === selected);
+  const days =
+    flow?.daily.time ??
+    Array.from({ length: 9 }, (_, i) =>
+      new Date(Date.UTC(2024, 8, 25 + i)).toISOString().slice(0, 10),
+    );
+  const dailyRain = useMemo(
+    () =>
+      Array.from({ length: 9 }, (_, i) => {
+        const slice = rain?.hourly.precipitation.slice(i * 24, (i + 1) * 24);
+        return !slice || slice.some((n) => n === null)
+          ? null
+          : slice.reduce<number>((a, b) => a + (b ?? 0), 0);
+      }),
+    [rain],
+  );
+  const calc = useMemo(() => {
+    if (!rain) return null;
+    try {
+      return {
+        base: runoff(rain.hourly.precipitation, {
+          rainScale: saved.scenario.rainScale,
+          loss: 0.35,
+          lag: 8,
+        }),
+        proposed: runoff(rain.hourly.precipitation, saved.scenario),
+      };
+    } catch {
+      return null;
+    }
+  }, [rain, saved.scenario]);
+  const storageMapData = useMemo(
+    () =>
+      storageRun
+        ? {
+            candidates: candidateMapFeatures(
+              storageRun.status === "succeeded" ? storageRun.candidates : [],
+            ),
+            water: waterMapFeatures(storageWater?.features ?? null),
+          }
+        : null,
+    [storageRun, storageWater],
+  );
+  const storageCandidates = useMemo(
+    () =>
+      storageRun
+        ? [...storageRun.candidates].sort(
+            (a, b) => b.geometricCapacityM3 - a.geometricCapacityM3,
+          )
+        : [],
+    [storageRun],
+  );
+  const inspected =
+    storageRun?.candidates.find((c) => c.id === selectedStorage) ?? null;
+  const interventionSummary = useMemo(
+    () => summarizeInterventions(saved.interventions ?? []),
+    [saved.interventions],
+  );
+  const inspectedIntervention = useMemo(
+    () =>
+      (saved.interventions ?? []).find((i) => i.id === selectedIntervention) ??
+      null,
+    [saved.interventions, selectedIntervention],
+  );
+  const enso = useMemo(() => getEnsoContextForYear(2024), []);
+  const ensoColor = useMemo(() => getEnsoColor(enso.phase), [enso.phase]);
+
+  function handlePlaceAt(coords: { lat: number; lon: number }) {
+    if (!activePlacementTool || activePlacementTool === "select") return;
+    const item = createIntervention(activePlacementTool, coords);
+    const blocked = placementBlock(item, placementReview.state === 'ready' ? placementReview.evidence : null, proposalItems);
+    if (blocked) { setPlacementError(blocked); return; }
+    setPlacementError('');
+    const updated = [...(saved.interventions ?? []), item];
+    update({ interventions: updated });
+    setSelectedIntervention(item.id);
+    setSelected(null);
+    setSelectedStorage(null);
+    setNotice(
+      `Placed ${item.name} at ${coords.lat.toFixed(4)}°N, ${coords.lon.toFixed(4)}°E.`,
+    );
+  }
+
+  function handleAdoptCandidate(candidate: StoredCandidate) {
+    const item = createIntervention(
+      "storage_basin",
+      { lat: candidate.centroid[1], lon: candidate.centroid[0] },
+      {
+        name: `Planned Basin (Depression #${candidate.id})`,
+        capacityM3: candidate.geometricCapacityM3,
+        areaM2: candidate.footprintAreaM2,
+        depthM: candidate.maximumDepthToSpillM,
+        sourceCandidateId: candidate.id,
+        footprint: { type: "Polygon", coordinates: [candidate.polygon.outer, ...candidate.polygon.holes] },
+        notes: `Adopted from Priority-Flood candidate #${candidate.id}. Spill elevation: ${candidate.spillElevationM.toFixed(1)} m. Footprint: ${candidate.footprintAreaM2.toLocaleString()} m². Available storage requires bathymetric verification.`,
+      },
+    );
+    const blocked = placementBlock(item, placementReview.state === 'ready' ? placementReview.evidence : null, proposalItems);
+    if (blocked) { setPlacementError(blocked); return; }
+    setPlacementError('');
+    const updated = [...(saved.interventions ?? []), item];
+    update({ interventions: updated });
+    setSelectedIntervention(item.id);
+    setSelectedStorage(null);
+    setNotice(
+      `Adopted candidate #${candidate.id} as a planned storage basin (${item.capacityM3?.toLocaleString()} m³ geometric capacity).`,
+    );
+  }
+
+  function handleDeleteIntervention(id: string) {
+    const updated = (saved.interventions ?? []).filter((i) => i.id !== id);
+    update({ interventions: updated });
+    if (selectedIntervention === id) setSelectedIntervention(null);
+    setNotice("Intervention removed.");
+  }
+
+  function handleUndoIntervention() {
+    const current = saved.interventions ?? [];
+    if (!current.length) return;
+    const updated = current.slice(0, -1);
+    update({ interventions: updated });
+    setSelectedIntervention(null);
+    setNotice("Undid last intervention placement.");
+  }
+
+  function choose(id: string) {
+    setSelected(id);
+    setSelectedIntervention(null);
+    const c = saved.checks.find((c) => c.assetId === id);
+    setNote(c?.note ?? "");
+    setAssignee(c?.assignee ?? "");
+  }
+  function record(status: FieldCheck["status"]) {
+    if (!active) return;
+    if (status !== "To verify" && !note.trim()) {
+      setNotice("Add an observation before recording or reviewing evidence.");
+      return;
+    }
+    const c = {
+      id: `check-${active.id}`,
+      assetId: active.id,
+      status,
+      note: note.slice(0, 3000),
+      assignee: assignee.slice(0, 100),
+      updated: new Date().toISOString(),
+    };
+    update({
+      checks: [...saved.checks.filter((x) => x.assetId !== active.id), c],
+    });
+    setNotice(
+      status === "Reviewed"
+        ? "Marked reviewed in this local workspace. This does not certify safety."
+        : "Field check saved on this device.",
+    );
+  }
+  function download(content: string, name: string, type = "application/json") {
+    const u = URL.createObjectURL(new Blob([content], { type }));
+    const a = document.createElement("a");
+    a.href = u;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(u), 1000);
+  }
+  function addAsset() {
+    if (!newName.trim()) return;
+    const a: Asset = {
+      id: `local-${Date.now()}`,
+      name: newName.trim(),
+      kind: "resource",
+      ...saved.area,
+      source: "User-entered point; unverified",
+    };
+    update({ custom: [...saved.custom, a] });
+    setNewName("");
+    setAdding(false);
+    choose(a.id);
+    setNotice(
+      "Added at the review-area centre. Location requires verification.",
+    );
+  }
+  const renderResource = (a: Asset) => {
+    const status =
+      saved.checks.find((c) => c.assetId === a.id)?.status ?? "To verify";
+    return (
+      <button
+        className={`resource-row ${selected === a.id ? "active" : ""}`}
+        key={a.id}
+        onClick={() => choose(a.id)}
+      >
+        <span
+          className={`resource-icon ${a.kind === "hospital" || a.kind === "clinic" ? "red" : ""}`}
+        >
+          <Building2 size={19} />
+        </span>
+        <span>
+          <strong>{a.name}</strong>
+          <small>
+            {a.kind.replace("_", " ")} · {distanceKm(a, saved.area).toFixed(1)}{" "}
+            km
+          </small>
+          <em className={status === "Reviewed" ? "reviewed" : ""}>{status}</em>
+        </span>
+        <ChevronRight size={15} />
+      </button>
+    );
+  };
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <a
+          href="#"
+          className="brand"
+          onClick={(e) => {
+            e.preventDefault();
+            setTab("3D explorer");
+          }}
+        >
+          <span className="brand-symbol">
+            <Mountain size={29} />
+          </span>
+          TerraScope
+          <span className="brand-sub">Flood preparedness workspace</span>
+        </a>
+        <nav aria-label="Workspace">
+          {(
+            [
+              { name: "3D explorer", icon: Mountain },
+              { name: "River history", icon: Waves },
+              { name: "Explore", icon: Map },
+              { name: "Compare", icon: GitCompareArrows },
+              { name: "Field checks", icon: ClipboardCheck },
+              { name: "Response plan", icon: FileText },
+            ] as const
+          ).map(({ name, icon: Icon }) => (
+            <button
+              key={name}
+              aria-current={tab === name ? "page" : undefined}
+              onClick={() => setTab(name)}
+            >
+              <Icon size={17} />
+              <span>{name}</span>
+            </button>
+          ))}
+        </nav>
+        <button
+          className="source-top"
+          aria-label="Data and sources"
+          onClick={() => setSources(true)}
+        >
+          <Info size={17} />
+          <span>Data & sources</span>
+        </button>
+      </header>
+      <div className="casebar">
+        <div>
+          <span className="live-dot" />
+          <strong>Gandak river corridor</strong>
+          <span className="case-location">Bihar, India</span>
+        </div>
+        <div className="enso-badge" title={enso.notes}>
+          <span className="enso-dot" style={{ backgroundColor: ensoColor }} />
+          <strong>ENSO: {enso.phase} ({enso.year})</strong>
+          <span className="enso-sub">
+            ONI: {enso.oniAnomalyC > 0 ? `+${enso.oniAnomalyC}` : enso.oniAnomalyC}°C
+          </span>
+        </div>
+        <div>
+          <span className="mode-pill">Historical data replay</span>
+          <span className="case-date">
+            {(tab === "River history" || tab === "3D explorer")
+              ? "2015 — 2024 · daily history"
+              : "25 Sep — 03 Oct 2024 · event detail"}
+          </span>
+          <button
+            aria-label="Export workspace"
+            title="Export workspace"
+            onClick={() =>
+              download(
+                JSON.stringify(
+                  { exportedAt: new Date().toISOString(), ...saved, manifest },
+                  null,
+                  2,
+                ),
+                "terrascope-workspace.json",
+              )
+            }
+          >
+            <Download size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="workspace-commandbar">
+      <details className="workspace-disclosure placement-disclosure"><summary>Placement tools</summary>
+      <div
+        className="placement-bar"
+        role="toolbar"
+        aria-label="Intervention placement tools"
+      >
+        <span className="placement-label">Interventions:</span>
+        <button
+          className={`placement-btn ${activePlacementTool === "select" ? "active" : ""}`}
+          onClick={() => setActivePlacementTool("select")}
+          aria-pressed={activePlacementTool === "select"}
+          title="Select and inspect elements on the map"
+        >
+          Select
+        </button>
+        <button
+          className={`placement-btn basin ${activePlacementTool === "storage_basin" ? "active" : ""}`}
+          onClick={() =>
+            setActivePlacementTool(
+              activePlacementTool === "storage_basin"
+                ? "select"
+                : "storage_basin",
+            )
+          }
+          aria-pressed={activePlacementTool === "storage_basin"}
+          title="Place water storage basin on terrain"
+        >
+          <Droplets size={14} />
+          + Basin
+        </button>
+        <button
+          className={`placement-btn solar ${activePlacementTool === "solar_array" ? "active" : ""}`}
+          onClick={() =>
+            setActivePlacementTool(
+              activePlacementTool === "solar_array" ? "select" : "solar_array",
+            )
+          }
+          aria-pressed={activePlacementTool === "solar_array"}
+          title="Place ground-mounted solar array"
+        >
+          <Sun size={14} />
+          + Solar
+        </button>
+        <button
+          className={`placement-btn wind ${activePlacementTool === "wind_turbine" ? "active" : ""}`}
+          onClick={() =>
+            setActivePlacementTool(
+              activePlacementTool === "wind_turbine" ? "select" : "wind_turbine",
+            )
+          }
+          aria-pressed={activePlacementTool === "wind_turbine"}
+          title="Place wind turbine location"
+        >
+          <Wind size={14} />
+          + Wind
+        </button>
+        <button
+          className={`placement-btn vegetation ${activePlacementTool === "vegetation_buffer" ? "active" : ""}`}
+          onClick={() =>
+            setActivePlacementTool(
+              activePlacementTool === "vegetation_buffer"
+                ? "select"
+                : "vegetation_buffer",
+            )
+          }
+          aria-pressed={activePlacementTool === "vegetation_buffer"}
+          title="Place riparian vegetation buffer"
+        >
+          <Trees size={14} />
+          + Vegetation
+        </button>
+        <button
+          className="placement-btn undo"
+          onClick={handleUndoIntervention}
+          disabled={!saved.interventions?.length}
+          title="Undo last placement"
+        >
+          <RotateCcw size={13} />
+          Undo
+        </button>
+        {saved.interventions && saved.interventions.length > 0 && (
+          <span className="placement-summary">
+            {saved.interventions.length} proposed / placement only; effects not calculated
+          </span>
+        )}
+      </div>
+      </details>
+      <details className="workspace-disclosure search-disclosure"><summary>Search places / change area</summary><PlaceSearch onChoose={chooseArea}/></details>
+      <div className="proposal-controls">
+        <button onClick={() => setCoordinatePlacement(v => !v)} aria-expanded={coordinatePlacement}>Place by coordinates</button>
+        <details><summary>Proposals ({proposalItems.length}) / checks</summary>
+          {proposalItems.length === 0 ? <p>No proposals yet. Choose a placement tool or enter coordinates.</p> : proposalItems.map(item => <button key={item.id} onClick={() => { setSelectedIntervention(item.id); setSelected(null); setSelectedStorage(null); }}>
+            {item.name} / {placementReview.state === 'loading' ? 'checking' : placementReview.checks[item.id]?.status ?? 'unknown'}
+          </button>)}
+        </details>
+      </div>
+      </div>
+      {mapTarget && <div className="area-data-note" role="status"><strong>{mapTarget.label}</strong> / {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks?' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall, discharge and NRSC flood snapshots remain the original Sonpur case. They do not describe this selected area. Terrain screening runs for the selected centre; suitability remains unverified.</div>}
+      {placementError && <div className="placement-blocked" role="alert">{placementError}<button onClick={()=>setPlacementError('')}>Dismiss</button></div>}
+      {coordinatePlacement && <form className="coordinate-placement" onSubmit={e => {
+        e.preventDefault();
+        const coords = { lat: Number(placementLat), lon: Number(placementLon) };
+        if (!Number.isFinite(coords.lat) || Math.abs(coords.lat) > 85 || !Number.isFinite(coords.lon) || Math.abs(coords.lon) > 180) return;
+        handlePlaceAt(coords);
+      }}>
+        <label>Proposal type<select aria-label="Coordinate proposal type" value={activePlacementTool ?? 'select'} onChange={e => setActivePlacementTool(e.target.value as PlacementTool)}>
+          <option value="select">Choose a type</option><option value="wind_turbine">Land-based wind turbine</option><option value="solar_array">Ground-mounted solar</option><option value="storage_basin">Storage basin</option><option value="vegetation_buffer">Vegetation</option>
+        </select></label>
+        <label>Latitude<input aria-label="Placement latitude" type="number" min="-85" max="85" step="any" required value={placementLat} onChange={e => setPlacementLat(e.target.value)}/></label>
+        <label>Longitude<input aria-label="Placement longitude" type="number" min="-180" max="180" step="any" required value={placementLon} onChange={e => setPlacementLon(e.target.value)}/></label>
+        <button type="submit" disabled={!activePlacementTool || activePlacementTool === 'select'}>Place and check proposal</button>
+      </form>}
+      {inspectedIntervention && (tab === '3D explorer' || tab === 'River history') && <aside className="world-placement-review">
+        <PlacementReview item={inspectedIntervention} check={placementReview.checks[inspectedIntervention.id] ?? null} evidence={placementReview.evidence} state={placementReview.state} retry={placementReview.retry} close={() => setSelectedIntervention(null)} remove={() => handleDeleteIntervention(inspectedIntervention.id)}/>
+      </aside>}
+      {tab === "3D explorer" && (
+        <RiverHistory
+          onMap={() => setTab("Explore")}
+          onSources={() => setSources(true)}
+          renderWorld={(frame) => (
+            <WorldMap
+              frame={frame}
+              onSelectArea={p=>chooseArea({...p,label:"Map-selected area"})}
+              focusArea={mapTarget}
+              assets={assets}
+              onSelect={(id) => {
+                choose(id);
+                setTab("Explore");
+              }}
+              onHistory={() => setTab("River history")}
+              onSources={() => setSources(true)}
+              storage={storageMapData}
+              selectedStorage={selectedStorage}
+              onSelectStorage={setSelectedStorage}
+              showCandidates={showCandidates}
+              showWaterLayer={showWaterLayer}
+              interventions={saved.interventions}
+              selectedIntervention={selectedIntervention}
+              onSelectIntervention={setSelectedIntervention}
+              activePlacementTool={activePlacementTool}
+              onPlaceAt={handlePlaceAt}
+              showInterventions={showInterventions}
+              placementChecks={placementReview.checks}
+            />
+          )}
+        />
+      )}
+      {tab === "River history" && (
+        <RiverHistory
+          onMap={() => setTab("Explore")}
+          onSources={() => setSources(true)}
+        />
+      )}
+      <main
+        className="workspace"
+        style={
+          tab === "River history" || tab === "3D explorer"
+            ? { display: "none" }
+            : undefined
+        }
+      >
+        <section className="map-stage" aria-label="Geographic workspace">
+          {tab !== "3D explorer" && tab !== "River history" && (
+            <MapView
+              focusArea={mapTarget}
+              assets={assets}
+              selected={selected}
+              onSelect={choose}
+              onArea={(p) => {
+                chooseArea({...p,label:"Map-selected area"});
+                setSelected(null);
+                setSelectedStorage(null);
+              }}
+              showAssets={showAssets}
+              terrain={terrain}
+              storage={storageMapData}
+              selectedStorage={selectedStorage}
+              onSelectStorage={setSelectedStorage}
+              showCandidates={showCandidates}
+              showWaterLayer={showWaterLayer}
+              interventions={saved.interventions}
+              selectedIntervention={selectedIntervention}
+              onSelectIntervention={setSelectedIntervention}
+              activePlacementTool={activePlacementTool}
+              onPlaceAt={handlePlaceAt}
+              showInterventions={showInterventions}
+              placementChecks={placementReview.checks}
+            />
+          )}
+          <div className="map-heading">
+            <span className="eyebrow">
+              UNDERSTAND THE PLACE. PREPARE THE RESPONSE.
+            </span>
+            <h1>
+              Resources along
+              <br />
+              the river.
+            </h1>
+          </div>
+          <button
+            className="layer-toggle"
+            onClick={() => setLayers(!layers)}
+            aria-expanded={layers}
+          >
+            <Layers size={17} />
+            Map layers
+          </button>
+          {layers && (
+            <div className="layer-panel">
+              <div className="panel-label">
+                YOUR MAP
+                <button
+                  aria-label="Close map layers"
+                  onClick={() => setLayers(false)}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              {[
+                {
+                  name: "Tilted terrain view",
+                  icon: Mountain,
+                  on: terrain,
+                  act: () => setTerrain(!terrain),
+                },
+                {
+                  name: "Mapped resources",
+                  icon: Building2,
+                  on: showAssets,
+                  act: () => setShowAssets(!showAssets),
+                },
+                {
+                  name: "Candidate storage",
+                  icon: Droplets,
+                  on: showCandidates,
+                  act: () => setShowCandidates(!showCandidates),
+                },
+                {
+                  name: "Mapped water",
+                  icon: Waves,
+                  on: showWaterLayer,
+                  act: () => setShowWaterLayer(!showWaterLayer),
+                },
+                {
+                  name: "Placed interventions",
+                  icon: Sparkles,
+                  on: showInterventions,
+                  act: () => setShowInterventions(!showInterventions),
+                },
+              ].map(({ name, icon: Icon, on, act }) => (
+                <button
+                  className="layer-item"
+                  key={name}
+                  onClick={act}
+                  role="switch"
+                  aria-checked={on}
+                >
+                  <Icon size={18} />
+                  <span>{name}</span>
+                  <i className={on ? "switch on" : "switch"} />
+                </button>
+              ))}
+              <button
+                className="layer-item unavailable"
+                onClick={() => setSources(true)}
+              >
+                <Layers size={18} />
+                <span>Survey parcels</span>
+                <small>Needed</small>
+              </button>
+              <button className="layer-source" onClick={() => setSources(true)}>
+                <Info size={15} />
+                Sources & uncertainty
+                <ArrowUpRight size={14} />
+              </button>
+            </div>
+          )}
+          <div className="map-summary">
+            <div>
+              <CloudRain size={18} />
+              <span>
+                Rainfall · sample grid cell
+                <strong>
+                  {fmt(dailyRain[day])}
+                  <small> mm/day</small>
+                </strong>
+              </span>
+            </div>
+            <div>
+              <Waves size={18} />
+              <span>
+                GloFAS modeled discharge
+                <strong>
+                  {fmt(flow?.daily.river_discharge[day])}
+                  <small> m³/s</small>
+                </strong>
+              </span>
+            </div>
+          </div>
+          <div className="map-dock">
+            <MapPin size={16} />
+            <span>Click to move the resource-search centre</span>
+            <button onClick={() => setAdding(!adding)}>
+              <Plus size={15} />
+              Add resource
+            </button>
+          </div>
+        </section>
+        <aside className="side-panel">
+          <div className="panel-top">
+            <span className="eyebrow">
+              {tab === "Explore"
+                ? "PLACE → EVIDENCE → ACTION"
+                : tab === "Compare"
+                  ? "EXPLORE THE ASSUMPTIONS"
+                  : tab === "Field checks"
+                    ? "GROUND THE DATA"
+                    : "PREPARE WITH CONTEXT"}
+            </span>
+            <h2>
+              {tab === "Explore"
+                ? "Resources to review"
+                : tab === "Compare"
+                  ? "Compare scenarios"
+                  : tab === "Field checks"
+                    ? "Field verification"
+                    : "Preparedness draft"}
+            </h2>
+            <p>
+              {tab === "Explore"
+                ? "Start with the places that matter. Verify their condition before planning action."
+                : tab === "Compare"
+                  ? "A transparent runoff experiment. Change assumptions and inspect their effect."
+                  : tab === "Field checks"
+                    ? "Record local observations and keep uncertainty visible."
+                    : "Turn the available evidence into a reviewable preparation checklist."}
+            </p>
+          </div>
+          <section className="storage-panel" aria-label="Natural water-storage screening">
+            <div className="storage-head">
+              <Droplets size={16} />
+              <h3>Natural water-storage candidates</h3>
+              <span className="storage-actions">
+                <button
+                  className="text-action"
+                  disabled={storageBusy}
+                  onClick={() => startStorageRun(saved.area)}
+                >
+                  <RotateCcw size={12} />
+                  Re-run
+                </button>
+                {storageBusy && (
+                  <button className="text-action" onClick={cancelStorage}>
+                    Cancel
+                  </button>
+                )}
+              </span>
+            </div>
+            <small className="storage-intro">
+              Terrain depressions from open elevation tiles with mapped-water
+              context. Analysis starts automatically after the review centre
+              settles. Not recommendations, not surveyed reservoirs.
+            </small>
+            {storageBusy && (
+              <div className="storage-status" role="status">
+                {storagePhase}
+              </div>
+            )}
+            {!storageRun && !storageBusy && (
+              <div className="storage-status">
+                Waiting for the first screening run. A missing result is a data
+                gap, never evidence that storage is absent.
+              </div>
+            )}
+            {storageRun?.status === "failed" && (
+              <div className="storage-error" role="status">
+                {storageRun.error}
+              </div>
+            )}
+            {storageRun?.status === "cancelled" && (
+              <div className="storage-status">{storageRun.error}</div>
+            )}
+            {storageRun?.status === "insufficient-data" && (
+              <div className="storage-status">
+                This window's terrain could not complete screening.{" "}
+                {storageRun.limitations.join(" ")}
+              </div>
+            )}
+            {storageRun?.status === "succeeded" &&
+              (inspected ? (
+                <div className="candidate-detail">
+                  <div className="section-title">
+                    <Droplets size={17} />
+                    <h3>{inspected.label}</h3>
+                    <button
+                      onClick={() => setSelectedStorage(null)}
+                      aria-label="Close candidate details"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <small>
+                    {inspected.centroid[1].toFixed(5)},{" "}
+                    {inspected.centroid[0].toFixed(5)} · rounded terrain-grid
+                    cells, not a surveyed outline
+                  </small>
+                  <dl className="storage-facts">
+                    <div>
+                      <dt>Geometric capacity to spill</dt>
+                      <dd>{fmt(inspected.geometricCapacityM3)} m³</dd>
+                    </div>
+                    <div>
+                      <dt>Footprint</dt>
+                      <dd>{fmt(inspected.footprintAreaM2 / 10000)} ha</dd>
+                    </div>
+                    <div>
+                      <dt>Max depth to spill</dt>
+                      <dd>{inspected.maximumDepthToSpillM.toFixed(1)} m</dd>
+                    </div>
+                    <div>
+                      <dt>Spill rim / floor elevation</dt>
+                      <dd>
+                        {inspected.spillElevationM.toFixed(1)} /{" "}
+                        {inspected.minimumElevationM.toFixed(1)} m
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Mapped water here</dt>
+                      <dd>{waterNote(inspected.waterEvidence)}</dd>
+                    </div>
+                    {inspected.waterEvidence.features.length > 0 && (
+                      <div>
+                        <dt>Water feature records</dt>
+                        <dd>
+                          {inspected.waterEvidence.features
+                            .map((f) => f.label ?? f.id)
+                            .join(", ")}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Water available now</dt>
+                      <dd>Unknown — no bathymetry or level survey</dd>
+                    </div>
+                    <div>
+                      <dt>Suitability</dt>
+                      <dd>Unassessed — no engineering or field review</dd>
+                    </div>
+                  </dl>
+                  <small className="storage-unknowns">
+                    Not covered by this screen: catchment inflows and timing,
+                    seasonal water level, infiltration and groundwater,
+                    embankment works, current water volume, land ownership or
+                    protection status.
+                  </small>
+                  <button
+                    className="adopt-candidate-btn"
+                    onClick={() => handleAdoptCandidate(inspected)}
+                  >
+                    <Plus size={15} />
+                    Adopt candidate as planned storage basin
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="list-heading storage-heading">
+                    <span>
+                      {storageRun.candidates.length <
+                      storageRun.candidateCountTotal
+                        ? `${storageRun.candidateCountTotal} depressions found · showing top ${storageRun.candidates.length}`
+                        : storageRun.candidateCountTotal === 0
+                          ? "No depressions found in this window"
+                          : `${storageRun.candidateCountTotal} depressions · largest first`}{" "}
+                      {storageRun.provenance.metersPerPixel.toFixed(0)} m cells
+                    </span>
+                  </div>
+                  <div className="storage-list">
+                    {storageCandidates.map((c) => (
+                      <button
+                        key={c.id}
+                        className={`storage-row ${selectedStorage === c.id ? "active" : ""}`}
+                        onClick={() => setSelectedStorage(c.id)}
+                      >
+                        <span>
+                          <strong>{c.label}</strong>
+                          <small>
+                            {fmt(c.geometricCapacityM3)} m³ · depth{" "}
+                            {c.maximumDepthToSpillM.toFixed(1)} m ·{" "}
+                            {fmt(c.footprintAreaM2 / 10000)} ha
+                          </small>
+                        </span>
+                        <em>{waterNote(c.waterEvidence)}</em>
+                      </button>
+                    ))}
+                    {storageRun.candidateCountTotal === 0 && (
+                      <small className="storage-note">
+                        Analyzed terrain drains outward everywhere at{" "}
+                        {storageRun.provenance.metersPerPixel.toFixed(0)} m
+                        resolution. Smaller depressions may be below this
+                        grid's size; finer-source terrain would be needed to
+                        rule them out.
+                      </small>
+                    )}
+                  </div>
+                </>
+              ))}
+            {storageRun && (
+              <details className="storage-limitations">
+                <summary>
+                  Limitations ({storageRun.limitations.length})
+                </summary>
+                <ul>
+                  {storageRun.limitations.map((l, i) => (
+                    <li key={i}>{l}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {storageRun?.status === "succeeded" && (
+              <details className="storage-run">
+                <summary>Run provenance</summary>
+                <small>
+                  Method {storageRun.provenance.method} · schema{" "}
+                  {storageRun.schema} · config {storageRun.configHash} · run{" "}
+                  {storageRun.id}
+                  <br />
+                  Tiles at zoom {storageRun.provenance.tileMatrixZoom} ·{" "}
+                  {storageRun.provenance.metersPerPixel.toFixed(2)} m/pixel ·{" "}
+                  {storageRun.tilesFetched}/{storageRun.tilesTotal} fetched ·
+                  vertical datum {storageRun.provenance.verticalDatum}
+                  <br />
+                  Terrain {storageRun.provenance.terrainSource} · started{" "}
+                  {new Date(storageRun.startedAt).toLocaleString("en-GB")}
+                  {storageRun.provenance.waterRetrievedAt
+                    ? ` · water fetched ${new Date(storageRun.provenance.waterRetrievedAt).toLocaleTimeString("en-GB")}`
+                    : ""}
+                </small>
+                {storageRun.provenance.waterQueryUrl && (
+                  <a
+                    href={storageRun.provenance.waterQueryUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    OSM water query used <ExternalLink size={12} />
+                  </a>
+                )}
+              </details>
+            )}
+          </section>
+          {inspectedIntervention && (
+            <div
+              className="intervention-inspector"
+              role="region"
+              aria-label="Intervention parameters"
+            >
+              <div className="inspector-head">
+                <span className={`kind-pill ${inspectedIntervention.kind}`}>
+                  {inspectedIntervention.kind.replace("_", " ")}
+                </span>
+                <button
+                  onClick={() => setSelectedIntervention(null)}
+                  aria-label="Close intervention inspector"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <h3>{inspectedIntervention.name}</h3>
+              <div className="metric-row">
+                <span>Footprint:</span>
+                <strong>{inspectedIntervention.areaM2.toLocaleString()} m²</strong>
+              </div>
+              {inspectedIntervention.capacityM3 != null && (
+                <div className="metric-row">
+                  <span>{inspectedIntervention.sourceCandidateId ? "DEM geometric volume:" : "Assumed design volume:"}</span>
+                  <strong>
+                    {inspectedIntervention.capacityM3.toLocaleString()} m³
+                  </strong>
+                </div>
+              )}
+              {inspectedIntervention.depthM != null && (
+                <div className="metric-row">
+                  <span>{inspectedIntervention.sourceCandidateId ? "DEM depth to spill:" : "Assumed design depth:"}</span>
+                  <strong>{inspectedIntervention.depthM.toFixed(1)} m</strong>
+                </div>
+              )}
+              {inspectedIntervention.powerKw != null && (
+                <div className="metric-row">
+                  <span>Assumed nameplate rating:</span>
+                  <strong>
+                    {inspectedIntervention.powerKw.toLocaleString()} kW
+                  </strong>
+                </div>
+              )}
+              {inspectedIntervention.roughnessManning != null && (
+                <div className="metric-row">
+                  <span>Manning's Roughness (n):</span>
+                  <strong>{inspectedIntervention.roughnessManning}</strong>
+                </div>
+              )}
+              <p className="intervention-note">{inspectedIntervention.notes}</p>
+              <PlacementReview item={inspectedIntervention} check={placementReview.checks[inspectedIntervention.id] ?? null} evidence={placementReview.evidence} state={placementReview.state} retry={placementReview.retry}/>
+              <button
+                className="delete-btn"
+                onClick={() => handleDeleteIntervention(inspectedIntervention.id)}
+              >
+                Delete intervention
+              </button>
+            </div>
+          )}
+          {tab === "Explore" && (
+            <section className="ai-planner-card" aria-label="Screening and proposals">
+              <h3>Screening and proposals</h3>
+              <p>{storageBusy ? `Screening in progress: ${storagePhase}. Results are not ready.` : storageRun?.status === 'succeeded' ? `${storageRun.candidateCountTotal} DEM depressions screened; suitability unassessed.` : 'Terrain results unavailable. Missing evidence is not zero storage.'}</p>
+              <p>{proposalItems.length} proposal(s). Assumed/geometric volumes are not available storm storage. Placed objects do not change the illustrative runoff calculation.</p>
+              <p>Local AI is not connected. Placement checks use deterministic map intersections, not AI or engineering certification.</p>
+            </section>
+          )}
+          {adding && (
+            <div className="inline-form">
+              <label>
+                Resource name
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Proposed shelter"
+                  maxLength={120}
+                />
+              </label>
+              <small>
+                At {saved.area.lat.toFixed(4)}, {saved.area.lon.toFixed(4)} ·
+                user-entered, unverified
+              </small>
+              <button
+                className="primary"
+                disabled={!newName.trim()}
+                onClick={addAsset}
+              >
+                Add at review centre
+              </button>
+            </div>
+          )}
+          {(tab === "Explore" || tab === "Field checks") && (
+            <>
+              <div className="radius-control">
+                <label htmlFor="radius">
+                  Resource search radius
+                  <strong>{saved.radius.toFixed(1)} km</strong>
+                </label>
+                <input
+                  id="radius"
+                  type="range"
+                  min=".5"
+                  max="10"
+                  step=".5"
+                  value={saved.radius}
+                  onChange={(e) => update({ radius: Number(e.target.value) })}
+                />
+                <small>
+                  Search scope only. Does not estimate flood extent.
+                </small>
+                <details className="coordinates">
+                  <summary>Set review centre by coordinates</summary>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const data = new FormData(e.currentTarget);
+                      const lat = Number(data.get("lat")),
+                        lon = Number(data.get("lon"));
+                      if (
+                        Number.isFinite(lat) &&
+                        Math.abs(lat) <= 85 &&
+                        Number.isFinite(lon) &&
+                        Math.abs(lon) <= 180
+                      ) {
+                        chooseArea({lat,lon,label:"Coordinate-selected area"});
+                        setSelected(null);
+                        setNotice("Review centre updated.");
+                      }
+                    }}
+                    key={`${saved.area.lat},${saved.area.lon}`}
+                  >
+                    <label>
+                      Latitude
+                      <input
+                        name="lat"
+                        type="number"
+                        min="-85"
+                        max="85"
+                        step="any"
+                        defaultValue={saved.area.lat.toFixed(5)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Longitude
+                      <input
+                        name="lon"
+                        type="number"
+                        min="-180"
+                        max="180"
+                        step="any"
+                        defaultValue={saved.area.lon.toFixed(5)}
+                        required
+                      />
+                    </label>
+                    <button type="submit" className="secondary">
+                      Set centre
+                    </button>
+                  </form>
+                </details>
+              </div>
+              <div className="list-heading">
+                <span>{nearby.length} mapped resources</span>
+                <button
+                  onClick={() => setAdding(!adding)}
+                  aria-label="Add resource"
+                >
+                  <Plus size={17} />
+                </button>
+              </div>
+              <label className="search">
+                <Search size={15} />
+                <input
+                  aria-label="Search resources"
+                  placeholder="Find a resource…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
+              <div className="resource-list">
+                {visibleAssets.map(renderResource)}
+                {!visibleAssets.length && (
+                  <div className="empty">
+                    <MapPin size={26} />
+                    <strong>No matching resources</strong>
+                    <p>
+                      Move the review area, expand its radius or add a known
+                      location. Empty coverage does not mean no people or
+                      facilities are present.
+                    </p>
+                  </div>
+                )}
+              </div>
+              {active && (
+                <section className="evidence-card">
+                  <div className="section-title">
+                    <ClipboardCheck size={18} />
+                    <h3>{active.name}</h3>
+                    <button
+                      onClick={() => setSelected(null)}
+                      aria-label="Close resource"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <small>
+                    {active.lat.toFixed(5)}, {active.lon.toFixed(5)} · location
+                    unverified
+                  </small>
+                  {active.source.startsWith("https://") ? (
+                    <a href={active.source} target="_blank" rel="noreferrer">
+                      Open source record <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <small>{active.source}</small>
+                  )}
+                  <label>
+                    Assigned reviewer
+                    <input
+                      value={assignee}
+                      onChange={(e) => setAssignee(e.target.value)}
+                      placeholder="Name or team (optional)"
+                      maxLength={100}
+                    />
+                  </label>
+                  <label>
+                    Observation
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="What was checked? Include observation time, method and remaining uncertainty."
+                      maxLength={3000}
+                    />
+                  </label>
+                  <div className="button-pair">
+                    <button
+                      className="secondary"
+                      onClick={() => record("To verify")}
+                    >
+                      Queue check
+                    </button>
+                    <button
+                      className="primary"
+                      onClick={() => record("Evidence recorded")}
+                    >
+                      Save evidence
+                    </button>
+                  </div>
+                  <button
+                    className="text-action"
+                    disabled={!note.trim()}
+                    onClick={() => record("Reviewed")}
+                  >
+                    <Check size={14} />
+                    Mark locally reviewed
+                  </button>
+                  <small>Local records only. No team has been contacted.</small>
+                </section>
+              )}
+              <div className="next-card">
+                <ShieldCheck size={22} />
+                <div>
+                  <strong>Preparation starts with evidence.</strong>
+                  <p>Confirm access, facility status and available capacity.</p>
+                  <button
+                    className="text-action"
+                    onClick={() => {
+                      setTab("Response plan");
+                      setDraft(draftPlan(nearby, saved.checks, saved.radius));
+                    }}
+                  >
+                    Create a draft checklist
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+          {tab === "Compare" && (
+            <div className="compare-panel">
+              <p className="placement-model-note">Parameter experiment only. Placed interventions are not model inputs. An intervention-effect comparison is unavailable until catchment, outlet and other required model adapters are connected. Rainfall is identical in both runs.</p>
+              <div className="notice-card">
+                <Info size={17} />
+                <span>
+                  Illustrative model · not calibrated to the Gandak. Outputs are
+                  runoff depth per hour, not river discharge or flood depth.
+                </span>
+              </div>
+              {[
+                {
+                  key: "rainScale",
+                  label: "Rainfall multiplier",
+                  min: 0.25,
+                  max: 2,
+                  step: 0.05,
+                  unit: "×",
+                },
+                {
+                  key: "loss",
+                  label: "Assumed rainfall loss fraction",
+                  min: 0,
+                  max: 0.9,
+                  step: 0.05,
+                  unit: "",
+                },
+                {
+                  key: "lag",
+                  label: "Storage response time",
+                  min: 1,
+                  max: 24,
+                  step: 1,
+                  unit: " h",
+                },
+              ].map((c) => (
+                <label className="scenario-control" key={c.key}>
+                  {c.label}
+                  <strong>
+                    {saved.scenario[c.key as keyof Scenario]}
+                    {c.unit}
+                  </strong>
+                  <input
+                    aria-label={c.label}
+                    type="range"
+                    min={c.min}
+                    max={c.max}
+                    step={c.step}
+                    value={saved.scenario[c.key as keyof Scenario]}
+                    onChange={(e) => {
+                      update({
+                        scenario: {
+                          ...saved.scenario,
+                          [c.key]: Number(e.target.value),
+                        },
+                      });
+                      setRan(false);
+                    }}
+                  />
+                </label>
+              ))}
+              <button
+                className="primary full"
+                disabled={!calc}
+                onClick={() => setRan(true)}
+              >
+                <GitCompareArrows size={17} />
+                Run comparison
+              </button>
+              {ran && calc && (
+                <div className="comparison-result">
+                  <span className="eyebrow">ILLUSTRATIVE RUNOFF · mm/h</span>
+                  <Spark
+                    values={calc.base.map((x) => x.out)}
+                    comparison={calc.proposed.map((x) => x.out)}
+                  />
+                  <div className="key">
+                    <span>● Reference assumptions</span>
+                    <span>┄ Your assumptions</span>
+                  </div>
+                  <div className="result-grid">
+                    <div>
+                      <small>Reference peak (mm/h)</small>
+                      <strong>
+                        {Math.max(...calc.base.map((x) => x.out)).toFixed(2)}
+                      </strong>
+                    </div>
+                    <div>
+                      <small>Changed-assumption peak (mm/h)</small>
+                      <strong>
+                        {Math.max(...calc.proposed.map((x) => x.out)).toFixed(
+                          2,
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                  <p>
+                    Identical rainfall in both runs: {saved.scenario.rainScale} times the archived hourly series. Reference loss 0.35 and response 8 h; changed loss {saved.scenario.loss} and response {saved.scenario.lag} h. Both start with zero storage. These are parameter sensitivities, not measured site effects.
+                  </p>
+                  <button
+                    className="text-action"
+                    onClick={() =>
+                      download(
+                        JSON.stringify(
+                          {
+                            kind: "illustrative-linear-reservoir",
+                            modelVersion: "linear-reservoir-v1",
+                            units: {
+                              input: "mm/h",
+                              out: "mm/h",
+                              storage: "mm",
+                            },
+                            initialStorage: 0,
+                            time: rain?.hourly.time,
+                            assumptions:
+                              "No catchment area, channel routing, surveyed geometry or calibration; zero initial storage.",
+                            scenario: saved.scenario,
+                            referenceSettings: { rainScale: saved.scenario.rainScale, loss: 0.35, lag: 8 },
+                            placedInterventionsApplied: false,
+                            comparisonKind: "matched-rainfall-parameter-sensitivity",
+                            baseline: calc.base,
+                            proposed: calc.proposed,
+                            manifest,
+                          },
+                          null,
+                          2,
+                        ),
+                        "terrascope-comparison.json",
+                      )
+                    }
+                  >
+                    <Download size={14} />
+                    Export model results
+                  </button>
+                </div>
+              )}
+              <details>
+                <summary>How this calculation works</summary>
+                <p>
+                  Hourly rainfall minus an assumed loss enters a linear storage
+                  reservoir. Each hour releases a fraction 1 − exp(−1 / response
+                  time). Storage starts at zero. Remaining water stays in
+                  storage. This conserves the modeled water input; it does not
+                  include channel geometry, soil measurements or upstream
+                  operations.
+                </p>
+              </details>
+              <button
+                className="text-action"
+                onClick={() => {
+                  update({ scenario: initial.scenario });
+                  setRan(false);
+                }}
+              >
+                <RotateCcw size={14} />
+                Reset assumptions
+              </button>
+            </div>
+          )}
+          {tab === "Response plan" && (
+            <div className="plan-panel">
+              <span className="review-badge">Human review required</span>
+              <p className="small-copy">
+                Generate a local worksheet from the resources in your review
+                area and the evidence you recorded.
+              </p>
+              <button
+                className="primary full"
+                onClick={() =>
+                  setDraft(draftPlan(nearby, saved.checks, saved.radius))
+                }
+              >
+                <FileText size={16} />
+                {draft ? "Refresh draft" : "Generate draft"}
+              </button>
+              <div className="draft-method">
+                <ShieldCheck size={14} />
+                Local source-linked template · no LLM connected
+              </div>
+              {draft ? (
+                <>
+                  <textarea
+                    className="draft-editor"
+                    aria-label="Preparedness draft"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                  />
+                  <button
+                    className="secondary full"
+                    onClick={() =>
+                      download(
+                        draft,
+                        "terrascope-preparedness-draft.txt",
+                        "text/plain",
+                      )
+                    }
+                  >
+                    <Download size={15} />
+                    Export draft
+                  </button>
+                </>
+              ) : (
+                <div className="empty">
+                  <FileText size={32} />
+                  <strong>A practical starting point.</strong>
+                  <p>
+                    Your draft will list resource checks, preparation options
+                    and information still needed. It will not issue a warning or
+                    declare a route safe.
+                  </p>
+                </div>
+              )}
+              <a
+                className="guidance-link"
+                href="https://nidm.gov.in/pdf/guidelines/floods.pdf"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Read NDMA flood-management guidance
+                <ArrowUpRight size={14} />
+              </a>
+            </div>
+          )}
+          <footer className="panel-footer">
+            <span className="live-dot" />
+            Saved on this device
+            <button onClick={() => setSources(true)}>
+              Sources
+              <ArrowUpRight size={12} />
+            </button>
+          </footer>
+        </aside>
+      </main>
+      <section
+        className="timeline-panel"
+        aria-label="Historical timeline"
+        style={tab === "River history" || tab === "3D explorer" ? { display: "none" } : undefined}
+      >
+        <div className="timeline-top">
+          <button
+            className="play-button"
+            aria-label={playing ? "Pause replay" : "Play replay"}
+            onClick={() => {
+              if (day === 8) setDay(0);
+              setPlaying(!playing);
+            }}
+          >
+            {playing ? <Pause size={17} /> : <Play size={17} />}
+          </button>
+          <div className="timeline-title">
+            <strong>Replay the conditions</strong>
+            <span>{date(days[day])} 2024</span>
+          </div>
+          <input
+            aria-label="Replay day"
+            type="range"
+            min="0"
+            max="8"
+            step="1"
+            value={day}
+            onChange={(e) => {
+              setPlaying(false);
+              setDay(Number(e.target.value));
+            }}
+          />
+          <span className="day-count">Day {day + 1} / 9</span>
+          <button
+            className="secondary table-button"
+            onClick={() => setShowTable(true)}
+          >
+            Inspect data
+            <ArrowUpRight size={14} />
+          </button>
+        </div>
+        <div className="timeline-charts">
+          <div>
+            <div className="chart-heading">
+              <span>
+                <CloudRain size={15} />
+                Rainfall input
+              </span>
+              <small>ERA5 sample cell · daily total, IST · mm</small>
+            </div>
+            <Spark values={dailyRain} bars color="#6a9cc6" />
+          </div>
+          <div>
+            <div className="chart-heading">
+              <span>
+                <Waves size={15} />
+                River discharge
+              </span>
+              <small>GloFAS model · daily, UTC · m³/s</small>
+            </div>
+            <Spark values={flow?.daily.river_discharge ?? []} />
+          </div>
+          <div className="timeline-context">
+            <span className="eyebrow">KNOW WHAT YOU'RE SEEING</span>
+            <p>
+              Historical model estimates.
+              <br />
+              No forecast skill or inundation claim.
+            </p>
+            <button onClick={() => setSources(true)}>
+              Explore the evidence
+              <ChevronRight size={13} />
+            </button>
+          </div>
+        </div>
+      </section>
+      {notice && (
+        <div className="toast" role="status">
+          {notice}
+          <button
+            onClick={() => setNotice("")}
+            aria-label="Dismiss notification"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+      {dataErrors.length > 0 && (
+        <div className="data-error" role="status">
+          Unavailable datasets: {dataErrors.join(", ")}. Missing data is not
+          treated as zero.
+        </div>
+      )}
+      {(sources || showTable) && (
+        <div className="modal-backdrop">
+          <div
+            className="modal"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              sources ? "Data and limitations" : "Historical data table"
+            }
+          >
+            <button
+              className="modal-close"
+              onClick={() => {
+                setSources(false);
+                setShowTable(false);
+              }}
+              aria-label="Close dialog"
+            >
+              <X size={21} />
+            </button>
+            <span className="eyebrow">TRACEABLE INPUTS. HONEST LIMITS.</span>
+            <h2>
+              {sources
+                ? "The evidence behind the view"
+                : "Inspect the historical record"}
+            </h2>
+            {sources ? (
+              <>
+                <p>
+                  This workspace replays historical data and supports local
+                  review. The blue area is a user-defined search radius, not
+                  modeled or observed flooding.
+                </p>
+                <div className="source-cards">
+                  {manifest.map((m) => (
+                    <article key={m.id}>
+                      <h3>
+                        {m.id === "rainfall" || m.id === "rain-history"
+                          ? "ERA5 rainfall"
+                          : m.id === "discharge" || m.id === "flow-history"
+                            ? "GloFAS discharge"
+                            : "OpenStreetMap resources"}
+                      </h3>
+                      <span className="review-badge">{m.status}</span>
+                      <p>
+                        {m.id === "rainfall" || m.id === "rain-history"
+                          ? "Hourly reanalysis at a sample grid cell near 26.5°N, 84.25°E; not catchment-average or gauge rainfall. Approximately 0.25° resolution."
+                          : m.id === "discharge" || m.id === "flow-history"
+                            ? "Historical modeled discharge at returned grid cell 25.775°N, 85.125°E. River-cell assignment is not independently verified; not a gauge observation or an issue-time forecast."
+                            : "Mapped facility records, not a complete or field-verified inventory. Current mapping may differ from 2024. Bounded extract: 25.68–25.73°N, 85.14–85.19°E. Outside this area, inventory is unavailable. Way positions are mean vertices, not verified entrances."}
+                      </p>
+                      <small>
+                        {m.model}
+                        <br />
+                        {m.units} · {m.resolution}
+                        <br />
+                        Time reference: {m.timezone}
+                      </small>
+                      <small>
+                        Retrieved {m.retrieved} ·{" "}
+                        {m.id === "assets"
+                          ? "ODbL · OSM contributors"
+                          : "Open-Meteo / Copernicus · CC BY 4.0 data"}
+                      </small>
+                      <a href={m.url} target="_blank" rel="noreferrer">
+                        Original query
+                        <ExternalLink size={13} />
+                      </a>
+                      {m.sha256 && (
+                        <details>
+                          <summary>Dataset fingerprint</summary>
+                          <code>{m.sha256}</code>
+                        </details>
+                      )}
+                    </article>
+                  ))}
+                </div>
+                <h3>What is still needed</h3>
+                <p>
+                  Surveyed channels, embankment levels, independent event flood
+                  extents, local river observations and archived forecast
+                  issuance are not connected. Cadastral parcels and LLM/VLM
+                  services are not configured. A 3D map is not survey-grade
+                  evidence.
+                </p>
+                <p>
+                  Terrain uses Mapzen Terrain Tiles for context, with no
+                  vertical exaggeration. Basemap: OpenStreetMap. Data
+                  processing: local scripts with saved query manifests.
+                </p>
+                <div className="source-links">
+                  <a
+                    href="https://open-meteo.com/en/docs/historical-weather-api"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Rainfall documentation ↗
+                  </a>
+                  <a
+                    href="https://open-meteo.com/en/docs/flood-api"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Discharge documentation ↗
+                  </a>
+                  <a
+                    href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    OSM attribution ↗
+                  </a>
+                  <a
+                    href="https://registry.opendata.aws/terrain-tiles/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Terrain provenance ↗
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  Rainfall daily totals use IST. Discharge daily values use the
+                  original UTC model dates; they are not recalculated for the
+                  local day.
+                </p>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Rainfall (mm, IST)</th>
+                        <th>Discharge (m³/s, UTC)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {days.map((d, i) => (
+                        <tr key={d}>
+                          <th>{d}</th>
+                          <td>{fmt(dailyRain[i])}</td>
+                          <td>{fmt(flow?.daily.river_discharge[i])}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button
+                  className="primary"
+                  onClick={() =>
+                    download(
+                      "date,rainfall_mm_IST,modeled_discharge_m3s_UTC\n" +
+                        days
+                          .map(
+                            (d, i) =>
+                              `${d},${dailyRain[i] ?? ""},${flow?.daily.river_discharge[i] ?? ""}`,
+                          )
+                          .join("\n"),
+                      "terrascope-historical-data.csv",
+                      "text/csv",
+                    )
+                  }
+                >
+                  <Download size={15} />
+                  Download CSV
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

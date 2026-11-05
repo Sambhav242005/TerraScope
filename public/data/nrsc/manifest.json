@@ -1,0 +1,51 @@
+{
+  "provider": "Source: NRSC, ISRO/DOS",
+  "sourcePage": "https://bhuvan-app1.nrsc.gov.in/disaster/usrtasks/flood/flood.php?uname=empty",
+  "terms": "https://www.nrsc.gov.in/nrscnew/termsConditions.php",
+  "mode": "historical-provider-inundation-map",
+  "bbox": [
+    85.05,
+    25.6,
+    85.3,
+    25.85
+  ],
+  "crs": "EPSG:3857",
+  "imageDimensions": [
+    512,
+    512
+  ],
+  "nativeResolution": "Unknown; requested display pixels are not sensor resolution",
+  "limitations": [
+    "Provider-labelled inundation, not independently validated here",
+    "No depth, duration, current blockage or storage-capacity inference",
+    "Outside snapshot bounds and unmarked pixels are unknown, not dry/safe",
+    "Sensor, acquisition timezone, detection accuracy, permanent-water treatment and coverage mask unverified",
+    "Separate fixed observation date; not synchronized to the discharge replay",
+    "Non-commercial attributed development snapshots; production rights not cleared",
+    "Two other inspected requests returned only a watermark; excluded rather than interpreted as no flooding"
+  ],
+  "snapshots": [
+    {
+      "id": "2024-10-01-10",
+      "date": "2024-10-01",
+      "providerTimeLabel": "2024-10-01 10Hr (timezone unverified)",
+      "layer": "flood:br_2024_01_10_10",
+      "url": "https://bhuvan-gp1.nrsc.gov.in/bhuvan/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image%2Fpng&TRANSPARENT=true&LAYERS=flood%3Abr_2024_01_10_10&STYLES=&SRS=EPSG%3A3857&BBOX=9467722.691967918%2C2949622.9843312614%2C9495552.564666236%2C2980514.631012607&WIDTH=512&HEIGHT=512",
+      "image": "/data/nrsc/bihar-2024-10-01-10.png",
+      "retrievedAt": "2026-11-04T19:40:30.001759+00:00",
+      "sha256": "5d814cba79087925682669f79fc183fd9241f937589373ba023aba7dd12778e5",
+      "bytes": 28270
+    },
+    {
+      "id": "2024-10-02-06",
+      "date": "2024-10-02",
+      "providerTimeLabel": "2024-10-02 06Hr (timezone unverified)",
+      "layer": "flood:br_2024_02_10_06",
+      "url": "https://bhuvan-gp1.nrsc.gov.in/bhuvan/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image%2Fpng&TRANSPARENT=true&LAYERS=flood%3Abr_2024_02_10_06&STYLES=&SRS=EPSG%3A3857&BBOX=9467722.691967918%2C2949622.9843312614%2C9495552.564666236%2C2980514.631012607&WIDTH=512&HEIGHT=512",
+      "image": "/data/nrsc/bihar-2024-10-02-06.png",
+      "retrievedAt": "2026-11-04T19:40:30.907763+00:00",
+      "sha256": "9c2166227d73753f02525b0ad9b8e0ba681309d8d16bf72a4beda93a61c09e88",
+      "bytes": 28132
+    }
+  ]
+}

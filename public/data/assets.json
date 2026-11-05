@@ -1,0 +1,94 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 5217274522,
+      "tags": {
+        "amenity": "police"
+      },
+      "lat": 25.6979586,
+      "lon": 85.1704561
+    },
+    {
+      "type": "node",
+      "id": 6956635724,
+      "tags": {
+        "amenity": "hospital",
+        "name": "Jeevandeep Hospital, Saran"
+      },
+      "lat": 25.6938583,
+      "lon": 85.1806706
+    },
+    {
+      "type": "node",
+      "id": 12595041738,
+      "tags": {
+        "amenity": "hospital",
+        "name": "Sadar Aspatal"
+      },
+      "lat": 25.6957884,
+      "lon": 85.1800211
+    },
+    {
+      "type": "node",
+      "id": 12595791623,
+      "tags": {
+        "amenity": "hospital",
+        "name": "ANM training ccentre"
+      },
+      "lat": 25.694403,
+      "lon": 85.1792311
+    },
+    {
+      "type": "node",
+      "id": 12595806448,
+      "tags": {
+        "amenity": "hospital",
+        "name": "Dr N.dayal clinic"
+      },
+      "lat": 25.6939921,
+      "lon": 85.1798198
+    },
+    {
+      "type": "node",
+      "id": 12595811416,
+      "tags": {
+        "amenity": "hospital",
+        "name": "Government veternary hospital"
+      },
+      "lat": 25.6948313,
+      "lon": 85.1786003
+    },
+    {
+      "type": "node",
+      "id": 12595946092,
+      "tags": {
+        "amenity": "hospital",
+        "name": "Divisional railway hospital"
+      },
+      "lat": 25.6939389,
+      "lon": 85.1689169
+    },
+    {
+      "type": "node",
+      "id": 12595999563,
+      "tags": {
+        "amenity": "police",
+        "name": "Sonpur police station"
+      },
+      "lat": 25.6967029,
+      "lon": 85.1703399
+    },
+    {
+      "type": "node",
+      "id": 14111586374,
+      "tags": {
+        "amenity": "school",
+        "name": "Shanti School"
+      },
+      "lat": 25.7110492,
+      "lon": 85.1435487
+    }
+  ],
+  "note": "Way representative positions are mean vertex coordinates, not surveyed entrances."
+}
