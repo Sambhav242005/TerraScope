@@ -1,0 +1,14 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ channel: 'msedge', headless: true });
+const c = await b.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+const p = await c.newPage();
+await p.goto('http://127.0.0.1:4173');
+await p.getByRole('button', { name: 'Explore', exact: true }).click();
+await p.locator('.maplibregl-canvas').waitFor();
+await p.waitForTimeout(9000);
+const row = p.locator('.storage-row').first();
+await row.click();
+await p.waitForTimeout(1200);
+await p.screenshot({ path: 'artifacts/_candidate-detail.png' });
+console.log((await p.locator('.candidate-detail').innerText()).slice(0, 800));
+await b.close();

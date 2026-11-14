@@ -31,10 +31,12 @@ import {
   Wind,
   Trees,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
 import MapView from "./flood/MapView";
 import RiverHistory from "./flood/RiverHistory";
 import WorldMap from "./flood/WorldMap";
+import { CandidateProfileChart } from "./flood/storage/CandidateProfileChart";
 import {
   parseAssets,
   distanceKm,
@@ -70,7 +72,10 @@ import {
 } from "./flood/intervention";
 import { getEnsoContextForYear, getEnsoColor } from "./flood/enso";
 import PlaceSearch, {type MapTarget} from "./flood/PlaceSearch";
-import {placementBlock} from "./flood/placementAdmission";
+import {assessPlacement, type PlacementAttempt} from "./flood/placementAdmission";
+import {summarizeAttempt} from "./flood/placementFeedback";
+import {placementAreaKey} from "./flood/areaEvidence";
+import type {PlacementEvidence} from "./flood/placementCheck";
 import PlacementReview from "./flood/PlacementReview";
 import { usePlacementChecks } from "./flood/usePlacementChecks";
 import "./style.css";
@@ -257,10 +262,13 @@ export default function App() {
     >([]),
     [dataErrors, setDataErrors] = useState<string[]>([]),
     [day, setDay] = useState(4),
+    [waterOn, setWaterOn] = useState(false),
+    [waterLevel, setWaterLevel] = useState(50),
     [playing, setPlaying] = useState(false),
     [selected, setSelected] = useState<string | null>(null),
     [sources, setSources] = useState(false),
     [showTable, setShowTable] = useState(false),
+    [showGuide, setShowGuide] = useState(false),
     [showAssets, setShowAssets] = useState(true),
     [terrain, setTerrain] = useState(true),
     [layers, setLayers] = useState(false),
@@ -287,8 +295,11 @@ export default function App() {
   const proposalItems = useMemo(() => saved.interventions ?? [], [saved.interventions]);
   const [mapTarget, setMapTarget] = useState<MapTarget | null>(()=>saved.mapTarget??null);
   const [placementError, setPlacementError] = useState("");
+  const [placementAttempt, setPlacementAttempt] = useState<PlacementAttempt | null>(null);
+  const [cameraPoint, setCameraPoint] = useState<{lat:number;lon:number} | null>(null);
+  const pendingPlacement = useRef<{item: Intervention; areaKey: string; autoAreaMoved: boolean; target: {lat:number;lon:number}; success: string} | null>(null);
   const placementReview = usePlacementChecks(proposalItems, saved.area);
-  function chooseArea(target:MapTarget) { storageAbort.current?.abort();lastStorageRun.current=null;setStorageRun(null);setStorageWater(null);setStorageBusy(false);setPlacementLat(String(target.lat));setPlacementLon(String(target.lon));setMapTarget(target);update({area:{lat:target.lat,lon:target.lon},mapTarget:target});setActivePlacementTool('select');setSelectedIntervention(null);setSelectedStorage(null);setPlacementError(''); }
+  function chooseArea(target:MapTarget) { storageAbort.current?.abort();lastStorageRun.current=null;setStorageRun(null);setStorageWater(null);setStorageBusy(false);setPlacementLat(String(target.lat));setPlacementLon(String(target.lon));setMapTarget(target);update({area:{lat:target.lat,lon:target.lon},mapTarget:target});setActivePlacementTool('select');setSelectedIntervention(null);setSelectedStorage(null);setPlacementError('');setPlacementAttempt(null);setCameraPoint(null);pendingPlacement.current=null; }
   const dialogRef = useRef<HTMLDivElement>(null);
   const [storageRun, setStorageRun] = useState<ScreeningRun | null>(null),
     [storageWater, setStorageWater] = useState<StoredWater | null>(null),
@@ -482,7 +493,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [playing]);
   useEffect(() => {
-    if (!sources && !showTable) return;
+    if (!sources && !showTable && !showGuide) return;
     const old = document.activeElement as HTMLElement;
     const dialog = dialogRef.current;
     const items = () =>
@@ -496,6 +507,7 @@ export default function App() {
       if (e.key === "Escape") {
         setSources(false);
         setShowTable(false);
+        setShowGuide(false);
       }
       if (e.key === "Tab") {
         const a = items();
@@ -537,6 +549,16 @@ export default function App() {
           : slice.reduce<number>((a, b) => a + (b ?? 0), 0);
       }),
     [rain],
+  );
+  const flowMax = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...(flow?.daily.river_discharge ?? []).filter(
+          (n): n is number => n != null,
+        ),
+      ),
+    [flow],
   );
   const calc = useMemo(() => {
     if (!rain) return null;
@@ -589,18 +611,140 @@ export default function App() {
   const enso = useMemo(() => getEnsoContextForYear(2024), []);
   const ensoColor = useMemo(() => getEnsoColor(enso.phase), [enso.phase]);
 
-  function handlePlaceAt(coords: { lat: number; lon: number }) {
-    if (!activePlacementTool || activePlacementTool === "select") return;
-    const item = createIntervention(activePlacementTool, coords);
-    const blocked = placementBlock(item, placementReview.state === 'ready' ? placementReview.evidence : null, proposalItems);
-    if (blocked) { setPlacementError(blocked); return; }
-    setPlacementError('');
-    const updated = [...(saved.interventions ?? []), item];
-    update({ interventions: updated });
+  function dismissPlacementAttempt() {
+    pendingPlacement.current = null;
+    setPlacementAttempt(null);
+    setPlacementError("");
+    setCameraPoint(null);
+  }
+
+  function retryPlacementAttempt() {
+    const attempt = placementAttempt;
+    if (!attempt) { placementReview.retry(); return; }
+    pendingPlacement.current = {
+      item: attempt.item,
+      areaKey: placementAreaKey(attempt.target),
+      autoAreaMoved: true,
+      target: attempt.target,
+      success: attempt.success,
+    };
+    setPlacementError("");
+    setPlacementAttempt({ ...attempt, state: "checking", block: null, check: assessPlacement(attempt.item, null, proposalItems).check });
+    focusPlacement(attempt.target);
+    placementReview.retry();
+  }
+
+  function focusPlacement(coords: { lat: number; lon: number }) {
+    // Camera-only: a blocked spot must be visible without relocating the
+    // reviewed area or re-fetching its evidence.
+    setCameraPoint({ lat: coords.lat, lon: coords.lon });
+  }
+
+  function moveAreaForCheck(coords: { lat: number; lon: number }) {
+    const target: MapTarget = {
+      ...coords,
+      label: `Placement check at ${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}`,
+    };
+    setPlacementLat(String(coords.lat));
+    setPlacementLon(String(coords.lon));
+    setMapTarget(target);
+    update({ area: { lat: coords.lat, lon: coords.lon }, mapTarget: target });
+  }
+
+  function commitPlacement(item: Intervention, success: string) {
+    pendingPlacement.current = null;
+    setPlacementError("");
+    setPlacementAttempt(null);
+    setCameraPoint(null);
+    // Append against the latest saved state, not the render that started the check.
+    setSaved((s) => ({ ...s, interventions: [...(s.interventions ?? []), item] }));
     setSelectedIntervention(item.id);
     setSelected(null);
     setSelectedStorage(null);
-    setNotice(
+    setNotice(success);
+  }
+
+  function submitPlacement(item: Intervention, coords: { lat: number; lon: number }, success: string) {
+    pendingPlacement.current = null;
+    setPlacementAttempt(null);
+    setPlacementError("");
+    setNotice("");
+    setSelectedIntervention(null);
+    const currentKey = placementAreaKey(saved.area);
+    const freshEvidence = placementReview.state === "ready" && placementReview.loadedAreaKey === currentKey;
+    if (freshEvidence) {
+      const admission = assessPlacement(item, placementReview.evidence, proposalItems);
+      if (!admission.block) { commitPlacement(item, success); return; }
+      if (!admission.needsAreaEvidence) {
+        // A real mapped/proposal conflict: keep the spot visible on the map,
+        // but do not save it. The next click clears this attempt and checks afresh.
+        setPlacementAttempt({ item, check: admission.check, block: admission.block, state: "blocked", target: coords, success });
+        setPlacementError(admission.block);
+        focusPlacement(coords);
+        return;
+      }
+      // The click is outside the loaded coverage: fetch this spot's evidence
+      // automatically, then run the check once more. No repeated "select area" loop.
+      pendingPlacement.current = { item, areaKey: placementAreaKey(coords), autoAreaMoved: true, target: coords, success };
+      setPlacementAttempt({ item, check: admission.check, block: admission.block, state: "checking", target: coords, success });
+      focusPlacement(coords);
+      moveAreaForCheck(coords);
+      // If the click is already the loaded area (large footprint outside its
+      // box), moving does not trigger a reload; force the one permitted recheck.
+      if (placementAreaKey(coords) === currentKey) placementReview.retry();
+      return;
+    }
+    // Evidence is still loading (or the area just moved). Queue the new click
+    // against its own area rather than the previous one, so a new spot is
+    // genuinely re-checked and the old pending problem cannot repeat.
+    pendingPlacement.current = { item, areaKey: placementAreaKey(coords), autoAreaMoved: true, target: coords, success };
+    setPlacementAttempt({ item, check: assessPlacement(item, null, proposalItems).check, block: null, state: "checking", target: coords, success });
+    focusPlacement(coords);
+    moveAreaForCheck(coords);
+    if (placementReview.state === "failed") placementReview.retry();
+  }
+
+  useEffect(() => {
+    const pending = pendingPlacement.current;
+    if (!pending) return;
+    if (placementReview.state === "loading") return;
+    if (placementReview.state === "failed") {
+      pendingPlacement.current = null;
+      const block = "Placement blocked: area map checks failed. Retry the area checks or choose another spot.";
+      setPlacementAttempt({ item: pending.item, check: assessPlacement(pending.item, null, proposalItems).check, block, state: "failed", target: pending.target, success: pending.success });
+      setPlacementError(block);
+      focusPlacement(pending.target);
+      return;
+    }
+    if (placementReview.loadedAreaKey !== pending.areaKey) return;
+    const admission = assessPlacement(pending.item, placementReview.evidence, proposalItems);
+    if (!admission.block) {
+      commitPlacement(pending.item, pending.success);
+      return;
+    }
+    if (admission.needsAreaEvidence && !pending.autoAreaMoved) {
+      // The first evidence bundle did not cover the footprint. Move once to the
+      // clicked spot, then re-check; a second failure is reported, not retried forever.
+      pending.autoAreaMoved = true;
+      pending.areaKey = placementAreaKey(pending.target);
+      setPlacementAttempt({ item: pending.item, check: admission.check, block: admission.block, state: "checking", target: pending.target, success: pending.success });
+      focusPlacement(pending.target);
+      if (pending.areaKey === placementReview.loadedAreaKey) placementReview.retry();
+      moveAreaForCheck(pending.target);
+      return;
+    }
+    pendingPlacement.current = null;
+    setPlacementAttempt({ item: pending.item, check: admission.check, block: admission.block, state: "blocked", target: pending.target, success: pending.success });
+    setPlacementError(admission.block);
+    focusPlacement(pending.target);
+  }, [placementReview.state, placementReview.loadedAreaKey, placementReview.evidence, proposalItems]);
+
+  function handlePlaceAt(coords: { lat: number; lon: number }) {
+    if (!activePlacementTool || activePlacementTool === "select") return;
+    const item = createIntervention(activePlacementTool, coords);
+    submitPlacement(
+      item,
+      coords,
       `Placed ${item.name} at ${coords.lat.toFixed(4)}°N, ${coords.lon.toFixed(4)}°E.`,
     );
   }
@@ -619,14 +763,9 @@ export default function App() {
         notes: `Adopted from Priority-Flood candidate #${candidate.id}. Spill elevation: ${candidate.spillElevationM.toFixed(1)} m. Footprint: ${candidate.footprintAreaM2.toLocaleString()} m². Available storage requires bathymetric verification.`,
       },
     );
-    const blocked = placementBlock(item, placementReview.state === 'ready' ? placementReview.evidence : null, proposalItems);
-    if (blocked) { setPlacementError(blocked); return; }
-    setPlacementError('');
-    const updated = [...(saved.interventions ?? []), item];
-    update({ interventions: updated });
-    setSelectedIntervention(item.id);
-    setSelectedStorage(null);
-    setNotice(
+    submitPlacement(
+      item,
+      { lat: candidate.centroid[1], lon: candidate.centroid[0] },
       `Adopted candidate #${candidate.id} as a planned storage basin (${item.capacityM3?.toLocaleString()} m³ geometric capacity).`,
     );
   }
@@ -767,6 +906,15 @@ export default function App() {
           ))}
         </nav>
         <button
+          className="guide-top-btn"
+          aria-label="What am I looking at? Guide"
+          title="Explain this workspace"
+          onClick={() => setShowGuide(true)}
+        >
+          <HelpCircle size={16} />
+          <span>Quick guide</span>
+        </button>
+        <button
           className="source-top"
           aria-label="Data and sources"
           onClick={() => setSources(true)}
@@ -774,8 +922,7 @@ export default function App() {
           <Info size={17} />
           <span>Data & sources</span>
         </button>
-      </header>
-      <div className="casebar">
+        <div className="casebar">
         <div>
           <span className="live-dot" />
           <strong>Gandak river corridor</strong>
@@ -812,9 +959,10 @@ export default function App() {
             <Download size={16} />
           </button>
         </div>
-      </div>
+        </div>
+      </header>
       <div className="workspace-commandbar">
-      <details className="workspace-disclosure placement-disclosure"><summary>Placement tools</summary>
+      <details className="workspace-disclosure placement-disclosure" open><summary>Placement tools</summary>
       <div
         className="placement-bar"
         role="toolbar"
@@ -899,20 +1047,51 @@ export default function App() {
             {saved.interventions.length} proposed / placement only; effects not calculated
           </span>
         )}
+        {placementAttempt && (
+          <span className={`placement-check-chip ${placementAttempt.state}`} role="status">
+            {placementAttempt.state === "checking"
+              ? "Checking…"
+              : placementAttempt.state === "failed"
+                ? "Check failed"
+                : "Blocked"}
+          </span>
+        )}
       </div>
       </details>
       <details className="workspace-disclosure search-disclosure"><summary>Search places / change area</summary><PlaceSearch onChoose={chooseArea}/></details>
       <div className="proposal-controls">
         <button onClick={() => setCoordinatePlacement(v => !v)} aria-expanded={coordinatePlacement}>Place by coordinates</button>
-        <details><summary>Proposals ({proposalItems.length}) / checks</summary>
-          {proposalItems.length === 0 ? <p>No proposals yet. Choose a placement tool or enter coordinates.</p> : proposalItems.map(item => <button key={item.id} onClick={() => { setSelectedIntervention(item.id); setSelected(null); setSelectedStorage(null); }}>
-            {item.name} / {placementReview.state === 'loading' ? 'checking' : placementReview.checks[item.id]?.status ?? 'unknown'}
-          </button>)}
+        <details className="proposals-details"><summary>Proposals ({proposalItems.length}) / checks</summary>
+          <div className="proposal-dropdown">
+            {proposalItems.length === 0 ? <p>No proposals yet. Choose a placement tool or enter coordinates.</p> : proposalItems.map(item => <button key={item.id} onClick={() => { setSelectedIntervention(item.id); setSelected(null); setSelectedStorage(null); }}>
+              {item.name} / {placementReview.state === 'loading' ? 'checking' : placementReview.checks[item.id]?.status ?? 'unknown'}
+            </button>)}
+          </div>
         </details>
       </div>
       </div>
-      {mapTarget && <div className="area-data-note" role="status"><strong>{mapTarget.label}</strong> / {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks?' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall, discharge and NRSC flood snapshots remain the original Sonpur case. They do not describe this selected area. Terrain screening runs for the selected centre; suitability remains unverified.</div>}
-      {placementError && <div className="placement-blocked" role="alert">{placementError}<button onClick={()=>setPlacementError('')}>Dismiss</button></div>}
+      {mapTarget && <div className="area-data-note" role="status"><strong>{mapTarget.label}</strong> / {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks…' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall and discharge series remain the original Sonpur case and do not describe this selected area. NRSC dated map-color snapshots are used only where their published bounds cover the footprint. Terrain screening runs for the selected centre; suitability remains unverified.</div>}
+      {placementError && (() => {
+        const attempt = placementAttempt;
+        const { kindLabels, names } = summarizeAttempt(attempt?.check);
+        const failed = attempt?.state === "failed";
+        return <div className="placement-blocked" role="alert">
+          <div className="placement-blocked-head">
+            <strong>{failed ? "Area check failed." : "This spot was not added."}</strong>
+            {kindLabels.length > 0 && <span className="placement-blocked-tags">
+              {kindLabels.map(k => <span key={k} className="placement-tag">{k}</span>)}
+            </span>}
+            {attempt && <span className="placement-blocked-coord">{attempt.target.lat.toFixed(4)}, {attempt.target.lon.toFixed(4)}</span>}
+          </div>
+          {names.length > 0 && <p className="placement-blocked-names">{names.join(" · ")}</p>}
+          <p className="placement-blocked-note">{failed ? "Area evidence unavailable. Retry or choose another spot." : "Nothing was saved. Map check does not authorize a site."}</p>
+          <div className="placement-blocked-actions">
+            <details className="placement-blocked-details"><summary>Details</summary><p>{placementError}</p></details>
+            {failed && <button onClick={retryPlacementAttempt}>Retry area checks</button>}
+            <button onClick={dismissPlacementAttempt}>Dismiss</button>
+          </div>
+        </div>;
+      })()}
       {coordinatePlacement && <form className="coordinate-placement" onSubmit={e => {
         e.preventDefault();
         const coords = { lat: Number(placementLat), lon: Number(placementLon) };
@@ -938,6 +1117,7 @@ export default function App() {
               frame={frame}
               onSelectArea={p=>chooseArea({...p,label:"Map-selected area"})}
               focusArea={mapTarget}
+              focusPoint={cameraPoint}
               assets={assets}
               onSelect={(id) => {
                 choose(id);
@@ -957,6 +1137,9 @@ export default function App() {
               onPlaceAt={handlePlaceAt}
               showInterventions={showInterventions}
               placementChecks={placementReview.checks}
+              placementAttempt={placementAttempt}
+              placementEvidence={placementReview.evidence}
+              onDismissPlacementAttempt={dismissPlacementAttempt}
             />
           )}
         />
@@ -979,6 +1162,12 @@ export default function App() {
           {tab !== "3D explorer" && tab !== "River history" && (
             <MapView
               focusArea={mapTarget}
+              focusPoint={cameraPoint}
+              waterLevel={waterOn ? waterLevel : null}
+              replayDate={days[day]}
+              discharge={flow?.daily.river_discharge[day] ?? null}
+              dischargeMax={flowMax}
+              dateLabel={`${date(days[day])} 2024`}
               assets={assets}
               selected={selected}
               onSelect={choose}
@@ -1001,18 +1190,11 @@ export default function App() {
               onPlaceAt={handlePlaceAt}
               showInterventions={showInterventions}
               placementChecks={placementReview.checks}
+              placementAttempt={placementAttempt}
+              placementEvidence={placementReview.evidence}
+              onDismissPlacementAttempt={dismissPlacementAttempt}
             />
           )}
-          <div className="map-heading">
-            <span className="eyebrow">
-              UNDERSTAND THE PLACE. PREPARE THE RESPONSE.
-            </span>
-            <h1>
-              Resources along
-              <br />
-              the river.
-            </h1>
-          </div>
           <button
             className="layer-toggle"
             onClick={() => setLayers(!layers)}
@@ -1092,20 +1274,26 @@ export default function App() {
             </div>
           )}
           <div className="map-summary">
-            <div>
-              <CloudRain size={18} />
+            <div className="summary-date">
+              <strong>Day {day + 1}</strong>
               <span>
-                Rainfall · sample grid cell
+                {date(days[day])} 2024
+              </span>
+            </div>
+            <div title="ERA5 sample grid cell · daily total">
+              <CloudRain size={14} />
+              <span>
+                Rain
                 <strong>
                   {fmt(dailyRain[day])}
-                  <small> mm/day</small>
+                  <small> mm/d</small>
                 </strong>
               </span>
             </div>
-            <div>
-              <Waves size={18} />
+            <div title="GloFAS modeled discharge at the sample river cell">
+              <Waves size={14} />
               <span>
-                GloFAS modeled discharge
+                Flow
                 <strong>
                   {fmt(flow?.daily.river_discharge[day])}
                   <small> m³/s</small>
@@ -1263,6 +1451,30 @@ export default function App() {
                       <dd>Unassessed — no engineering or field review</dd>
                     </div>
                   </dl>
+                  {inspected.profile ? (
+                    <figure className="candidate-profile">
+                      <figcaption>Terrain transect · {inspected.profile.axis}</figcaption>
+                      <CandidateProfileChart profile={inspected.profile} />
+                      <small>
+                        One DEM line through the lowest candidate cell, with a two-cell context margin.
+                        Heights use the source DEM reference; datum alignment and survey accuracy are unverified.
+                        The spill elevation is calculated from the full depression and may lie outside this line.
+                        This is terrain screening, not bathymetry or available water storage.
+                      </small>
+                      <details>
+                        <summary>Transect samples</summary>
+                        <table>
+                          <caption>Displayed DEM samples</caption>
+                          <thead><tr><th scope="col">Distance (m)</th><th scope="col">Elevation (m)</th></tr></thead>
+                          <tbody>{inspected.profile.points.map((point) => (
+                            <tr key={point.distanceM}><td>{point.distanceM.toFixed(1)}</td><td>{point.elevationM.toFixed(1)}</td></tr>
+                          ))}</tbody>
+                        </table>
+                      </details>
+                    </figure>
+                  ) : (
+                    <small>Terrain transect unavailable. Re-run screening to derive it from complete terrain samples.</small>
+                  )}
                   <small className="storage-unknowns">
                     Not covered by this screen: catchment inflows and timing,
                     seasonal water level, infiltration and groundwater,
@@ -1937,15 +2149,40 @@ export default function App() {
             </div>
             <Spark values={flow?.daily.river_discharge ?? []} />
           </div>
-          <div className="timeline-context">
-            <span className="eyebrow">KNOW WHAT YOU'RE SEEING</span>
+          <div className="timeline-context water-panel">
+            <div className="water-panel-head">
+              <span className="eyebrow">WATER-LEVEL SCENARIO</span>
+              <label className="water-switch">
+                <input
+                  type="checkbox"
+                  aria-label="Show water-level scenario"
+                  checked={waterOn}
+                  onChange={(e) => setWaterOn(e.target.checked)}
+                />
+                <span>Show</span>
+              </label>
+            </div>
+            <div className="water-slider">
+              <input
+                aria-label="Water surface elevation"
+                type="range"
+                min="44"
+                max="64"
+                step="0.5"
+                value={waterLevel}
+                onChange={(e) => {
+                  setWaterOn(true);
+                  setWaterLevel(Number(e.target.value));
+                }}
+              />
+              <output>{waterLevel.toFixed(1)} m</output>
+            </div>
             <p>
-              Historical model estimates.
-              <br />
-              No forecast skill or inundation claim.
+              Terrain below this surface. No hydraulics, timing or
+              embankments.
             </p>
             <button onClick={() => setSources(true)}>
-              Explore the evidence
+              What this does not show
               <ChevronRight size={13} />
             </button>
           </div>
@@ -1968,7 +2205,7 @@ export default function App() {
           treated as zero.
         </div>
       )}
-      {(sources || showTable) && (
+      {(sources || showTable || showGuide) && (
         <div className="modal-backdrop">
           <div
             className="modal"
@@ -1976,7 +2213,11 @@ export default function App() {
             role="dialog"
             aria-modal="true"
             aria-label={
-              sources ? "Data and limitations" : "Historical data table"
+              showGuide
+                ? "User guide and concept overview"
+                : sources
+                  ? "Data and limitations"
+                  : "Historical data table"
             }
           >
             <button
@@ -1984,18 +2225,74 @@ export default function App() {
               onClick={() => {
                 setSources(false);
                 setShowTable(false);
+                setShowGuide(false);
               }}
               aria-label="Close dialog"
             >
               <X size={21} />
             </button>
-            <span className="eyebrow">TRACEABLE INPUTS. HONEST LIMITS.</span>
-            <h2>
-              {sources
-                ? "The evidence behind the view"
-                : "Inspect the historical record"}
-            </h2>
-            {sources ? (
+            {showGuide ? (
+              <div className="guide-content">
+                <span className="eyebrow">WHAT AM I LOOKING AT? · USER GUIDE</span>
+                <h2>Understanding TerraScope Flood Workspace</h2>
+                <p className="guide-lead">
+                  TerraScope helps local planners, field coordinators, and communities prepare for floods along the Gandak and Ganga river corridors in Bihar, India. It combines 10-year river data with natural elevation screening and resilience project planning.
+                </p>
+                <div className="guide-grid">
+                  <div className="guide-card">
+                    <div className="guide-card-icon water"><Droplets size={22} /></div>
+                    <h3>Natural Storage Basins (Teal on Map)</h3>
+                    <p>
+                      The shaded teal outlines show <strong>natural depressions (ground bowls)</strong> detected from satellite elevation data. During monsoons, these areas naturally trap and hold runoff, protecting downstream settlements.
+                    </p>
+                  </div>
+                  <div className="guide-card">
+                    <div className="guide-card-icon wave"><Waves size={22} /></div>
+                    <h3>Simulating Water Levels</h3>
+                    <p>
+                      Use the <strong>Water-Level Scenario slider</strong> (bottom right) to simulate water surfaces between 44 m and 64 m elevation. The map immediately highlights low-lying land that would be submerged.
+                    </p>
+                  </div>
+                  <div className="guide-card">
+                    <div className="guide-card-icon rain"><Play size={22} /></div>
+                    <h3>Replaying the 2024 Flood</h3>
+                    <p>
+                      Click <strong>Replay</strong> on the bottom timeline to step through the late-September 2024 flood event, tracking river discharge (GloFAS) and local rainfall (ERA5) day by day.
+                    </p>
+                  </div>
+                  <div className="guide-card">
+                    <div className="guide-card-icon plan"><SlidersHorizontal size={22} /></div>
+                    <h3>Planning Interventions</h3>
+                    <p>
+                      Propose water storage basins, solar arrays, wind turbines, or riparian vegetation buffers. TerraScope checks every placement against real mapped buildings, roads, and riverways to avoid collisions.
+                    </p>
+                  </div>
+                </div>
+                <div className="guide-glossary">
+                  <h4>Key Metrics Explained Simply:</h4>
+                  <ul>
+                    <li><strong>Spill Rim Elevation:</strong> The highest boundary point of a bowl. If water rises above this level, it overflows into surrounding land.</li>
+                    <li><strong>Floor Elevation:</strong> The lowest ground point inside the bowl.</li>
+                    <li><strong>Max Depth to Spill:</strong> The difference between spill rim and floor (depth before spilling).</li>
+                    <li><strong>Geometric Capacity:</strong> Maximum water volume (m³) the depression can hold before spilling.</li>
+                  </ul>
+                </div>
+                <button
+                  className="guide-dismiss-btn"
+                  onClick={() => setShowGuide(false)}
+                >
+                  <Check size={16} /> Got it, continue exploring
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="eyebrow">TRACEABLE INPUTS. HONEST LIMITS.</span>
+                <h2>
+                  {sources
+                    ? "The evidence behind the view"
+                    : "Inspect the historical record"}
+                </h2>
+                {sources ? (
               <>
                 <p>
                   This workspace replays historical data and supports local
@@ -2137,6 +2434,8 @@ export default function App() {
                   Download CSV
                 </button>
               </>
+            )}
+            </>
             )}
           </div>
         </div>

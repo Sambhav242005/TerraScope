@@ -5,7 +5,9 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 maplibregl.setWorkerUrl(workerUrl);
 import { NRSC_FLOOD_SNAPSHOTS, NRSC_BOUNDS, nrscImageCoordinates } from "./nrsc";
 import { RenewableLayer } from "./renewableModels";
-import type { PlacementCheck } from "./placementCheck";
+import type { PlacementCheck, PlacementEvidence } from "./placementCheck";
+import type { PlacementAttempt } from "./placementAdmission";
+import { summarizeAttempt } from "./placementFeedback";
 import { type Asset } from "./model";
 import { type Intervention, type PlacementTool } from "./intervention";
 
@@ -13,6 +15,16 @@ type FeatureCollectionShim = {
   type: "FeatureCollection";
   features: Array<Record<string, unknown>>;
 };
+
+/** The scenario requests DEM tiles only for the Gandak/Sonpur box. `bounds`
+ * limits tile requests, not a hard visual clip; `minzoom` 9 keeps the layer
+ * from following a far zoom-out. It is still terrain-only, not a flood map. */
+const WATER_SCENARIO_BOUNDS: [number, number, number, number] = [
+  84.75, 25.35, 85.55, 26.0,
+];
+const WATER_SCENARIO_TILES = [
+  "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+];
 export type StorageMapData = {
   candidates: FeatureCollectionShim;
   water: FeatureCollectionShim;
@@ -31,6 +43,12 @@ function polygonCenterOf(feature: Record<string, unknown>): [number, number] | n
 
 export default function MapView({
   focusArea,
+  focusPoint,
+  waterLevel = null,
+  replayDate,
+  discharge = null,
+  dischargeMax = 1,
+  dateLabel = "",
   assets,
   selected,
   onSelect,
@@ -51,9 +69,22 @@ export default function MapView({
   onPlaceAt,
   showInterventions=true,
   placementChecks,
+  placementAttempt=null,
+  placementEvidence=null,
+  onDismissPlacementAttempt,
 }: {
   assets: Asset[];
   focusArea?:{lat:number;lon:number;label:string}|null;
+  focusPoint?:{lat:number;lon:number}|null;
+  /** Terrain-only scenario: paint every DEM cell below this elevation (m). */
+  waterLevel?:number|null;
+  /** Replay day (YYYY-MM-DD); matching observed snapshots auto-load. */
+  replayDate?:string;
+  /** GloFAS modeled discharge at the sample river cell for the replay day. */
+  discharge?:number|null;
+  /** Largest discharge in the replayed window; scales the marker bar only. */
+  dischargeMax?:number;
+  dateLabel?:string;
   selected: string | null;
   onSelect: (id: string) => void;
   onArea: (p: { lat: number; lon: number }) => void;
@@ -73,6 +104,9 @@ export default function MapView({
   onPlaceAt?: (coords: { lat: number; lon: number }) => void;
   showInterventions?: boolean;
   placementChecks?: Record<string, PlacementCheck | null>;
+  placementAttempt?: PlacementAttempt | null;
+  placementEvidence?: PlacementEvidence | null;
+  onDismissPlacementAttempt?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null),
     map = useRef<maplibregl.Map | null>(null),
@@ -80,8 +114,10 @@ export default function MapView({
     interventionMarkers = useRef<maplibregl.Marker[]>([]),
     [error, setError] = useState(""),
     [satellite, setSatellite] = useState(false),
-    [nrscSnapshot, setNrscSnapshot] = useState("");
+    [nrscSnapshot, setNrscSnapshot] = useState(""),
+    autoNrsc = useRef("");
   const renewableLayer = useRef<RenewableLayer | null>(null);
+  const riverGauge = useRef<{ marker: maplibregl.Marker; el: HTMLDivElement } | null>(null);
   const callbacks = useRef({ onArea, onSelect });
   callbacks.current = { onArea, onSelect };
   const latest = useRef({
@@ -124,7 +160,7 @@ export default function MapView({
               ],
               tileSize: 256,
               attribution:
-                'Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
               maxzoom: 19,
             },
             satellite: {
@@ -240,8 +276,10 @@ export default function MapView({
             a.kind === "hospital" || a.kind === "clinic"
               ? "+"
               : a.kind === "police"
-                ? "â—‡"
-                : "â–¥";
+                ? "P"
+                : a.kind === "school"
+                  ? "S"
+                  : "•";
           el.setAttribute("aria-label", `Inspect ${a.name}`);
           el.title = a.name;
           el.onclick = (e) => {
@@ -263,15 +301,15 @@ export default function MapView({
       return;
     }
     const glyphs: Record<string, string> = {
-      storage_basin: "âˆ‡",
-      solar_array: "â˜¼",
-      wind_turbine: "â…„",
-      vegetation_buffer: "â™£",
+      storage_basin: "∇",
+      solar_array: "☀",
+      wind_turbine: "✦",
+      vegetation_buffer: "♣",
     };
     interventionMarkers.current = interventions.map((item) => {
       const el = document.createElement("button");
       el.className = `intervention-pin ${item.kind} ${item.id === selectedIntervention ? "selected" : ""}`;
-      el.textContent = glyphs[item.kind] ?? "â€¢";
+      el.textContent = glyphs[item.kind] ?? "•";
       el.setAttribute("aria-label", `Inspect ${item.name}`);
       el.dataset.placementStatus = placementChecks?.[item.id]?.status ?? "unknown";
       el.title = `${item.name} - ${placementChecks?.[item.id]?.headline ?? "Suitability unknown"}`;
@@ -336,7 +374,7 @@ export default function MapView({
           type: "geojson",
           data: candidates,
           attribution:
-            "Terrain depressions: Mapzen Terrain Tiles â€” github.com/tilezen/joerd/blob/master/docs/attribution.md",
+            "Terrain depressions: Mapzen Terrain Tiles — github.com/tilezen/joerd/blob/master/docs/attribution.md",
         });
         m.addLayer({
           id: "storage-fill",
@@ -363,7 +401,7 @@ export default function MapView({
         m.addSource("storage-water", {
           type: "geojson",
           data: water,
-          attribution: "Â© OpenStreetMap contributors (ODbL)",
+          attribution: "© OpenStreetMap contributors (ODbL)",
         });
         m.addLayer({
           id: "storage-water",
@@ -413,6 +451,109 @@ export default function MapView({
     if (m.isStyleLoaded() || m.getSource("nrsc-flood")) apply(); else m.once("load", apply);
     return () => { m.off("load", apply); };
   }, [nrscSnapshot]);
+  // Replay only shows an observed provider map on its own fixed date. It never
+  // interpolates between snapshots or treats the image as depth.
+  useEffect(() => {
+    if (!replayDate) return;
+    const match = NRSC_FLOOD_SNAPSHOTS.find(s => s.id.startsWith(replayDate));
+    if (match) {
+      autoNrsc.current = match.id;
+      setNrscSnapshot(match.id);
+    } else if (autoNrsc.current) {
+      setNrscSnapshot(prev => (prev === autoNrsc.current ? "" : prev));
+      autoNrsc.current = "";
+    }
+  }, [replayDate]);
+  // A labeled sample-cell reading, not a hazard radius: the bar only encodes
+  // modeled discharge relative to the replayed nine-day window.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const el = document.createElement("div");
+    el.className = "river-gauge";
+    el.innerHTML =
+      '<span class="river-gauge-bar"><i></i></span><span class="river-gauge-copy"><small>GloFAS model · sample cell</small><strong></strong></span>';
+    const marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
+      .setLngLat([85.125, 25.775])
+      .addTo(m);
+    riverGauge.current = { marker, el };
+    return () => {
+      riverGauge.current = null;
+      marker.remove();
+    };
+  }, []);
+  useEffect(() => {
+    const gauge = riverGauge.current;
+    if (!gauge) return;
+    if (discharge == null) {
+      gauge.el.style.display = "none";
+      return;
+    }
+    gauge.el.style.display = "flex";
+    const strong = gauge.el.querySelector("strong");
+    if (strong) {
+      strong.textContent = `${Math.round(discharge).toLocaleString("en-IN")} m³/s`;
+    }
+    const bar = gauge.el.querySelector("i") as HTMLElement | null;
+    if (bar) {
+      const fraction = Math.max(0.08, Math.min(1, discharge / Math.max(1, dischargeMax)));
+      bar.style.height = `${Math.round(fraction * 30)}px`;
+    }
+    gauge.el.title = `GloFAS modeled discharge on ${dateLabel} at 85.125, 25.775. Sample-cell estimate, not a gauge. Bar is relative to the nine-day window, not flood depth or extent.`;
+  }, [discharge, dischargeMax, dateLabel]);
+  // Terrain-only water scenario: a flat user-set surface painted over DEM
+  // cells below it. No hydraulic routing, timing, embankments or depth model.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const sourceId = "water-scenario-dem";
+    const layerId = "water-scenario";
+    const apply = () => {
+      if (!m.getSource(sourceId)) {
+        m.addSource(sourceId, {
+          type: "raster-dem",
+          tiles: WATER_SCENARIO_TILES,
+          encoding: "terrarium",
+          tileSize: 256,
+          maxzoom: 15,
+          bounds: WATER_SCENARIO_BOUNDS,
+        });
+      }
+      if (waterLevel == null) {
+        if (m.getLayer(layerId)) m.setLayoutProperty(layerId, "visibility", "none");
+        return;
+      }
+      const color: maplibregl.ExpressionSpecification = [
+        "interpolate",
+        ["linear"],
+        ["elevation"],
+        0, "#083f57",
+        waterLevel - 8, "#0c5674",
+        waterLevel - 4, "#176d8b",
+        waterLevel - 1.5, "#2b8aa6",
+        waterLevel, "#63bdd2",
+        waterLevel + 0.4, "rgba(99,189,210,0)",
+      ];
+      if (m.getLayer(layerId)) {
+        m.setPaintProperty(layerId, "color-relief-color", color);
+        m.setLayoutProperty(layerId, "visibility", "visible");
+      } else {
+        m.addLayer({
+          id: layerId,
+          type: "color-relief",
+          source: sourceId,
+          minzoom: 9,
+          paint: {
+            "color-relief-color": color,
+            "color-relief-opacity": 0.78,
+          },
+        });
+      }
+    };
+    if (m.isStyleLoaded() || m.getSource(sourceId)) apply();
+    else m.once("load", apply);
+    return () => { m.off("load", apply); };
+  }, [waterLevel]);
   useEffect(() => {
     const m = map.current;
     if (!m) return;
@@ -420,21 +561,107 @@ export default function MapView({
       const data = { type: "FeatureCollection" as const, features: Object.entries(placementChecks ?? {}).flatMap(([id, check]) => check ? [{ type: "Feature", properties: { id, status: check.status }, geometry: check.footprint }] : []) };
       const source = m.getSource("placement-footprints") as maplibregl.GeoJSONSource | undefined;
       if (source) source.setData(data);
-      else {
-        m.addSource("placement-footprints", { type: "geojson", data });
-        m.addLayer({ id: "placement-footprints", type: "line", source: "placement-footprints", paint: { "line-color": ["case", ["==", ["get", "status"], "conflict"], "#a43b2d", "#986013"], "line-width": 2, "line-dasharray": [2, 1] } });
+      else m.addSource("placement-footprints", { type: "geojson", data });
+      if (!m.getLayer("placement-footprints-fill")) {
+        m.addLayer({ id: "placement-footprints-fill", type: "fill", source: "placement-footprints", paint: { "fill-color": ["case", ["==", ["get", "status"], "conflict"], "#a43b2d", ["==", ["get", "status"], "unknown"], "#7b8a7f", "#986013"], "fill-opacity": 0.1 } });
       }
+      if (!m.getLayer("placement-footprints")) {
+        m.addLayer({ id: "placement-footprints", type: "line", source: "placement-footprints", paint: { "line-color": ["case", ["==", ["get", "status"], "conflict"], "#a43b2d", ["==", ["get", "status"], "unknown"], "#7b8a7f", "#986013"], "line-width": 2, "line-dasharray": [2, 1] } });
+      }
+      m.setLayoutProperty("placement-footprints-fill", "visibility", showInterventions === false ? "none" : "visible");
       m.setLayoutProperty("placement-footprints", "visibility", showInterventions === false ? "none" : "visible");
     };
     if (m.isStyleLoaded() || m.getSource("placement-footprints")) apply(); else m.once("load", apply);
     return () => { m.off("load", apply); };
   }, [placementChecks, showInterventions]);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const attemptCheck = placementAttempt?.check ?? null;
+    const selectedCheck = selectedIntervention ? placementChecks?.[selectedIntervention] ?? null : null;
+    const checks = [attemptCheck, selectedCheck].filter((c): c is PlacementCheck => c !== null);
+    const conflictIds = new Set(checks.flatMap((c) => c.findings.flatMap((f) => f.featureIds)));
+    const conflictData = {
+      type: "FeatureCollection" as const,
+      features: (placementEvidence?.features ?? [])
+        .filter((f) => conflictIds.has(f.id))
+        .map((f) => ({ type: "Feature" as const, properties: { kind: f.kind, label: f.label ?? "" }, geometry: f.geometry })),
+    };
+    const attemptData = {
+      type: "FeatureCollection" as const,
+      features: placementAttempt ? [{ type: "Feature" as const, properties: { state: placementAttempt.state }, geometry: placementAttempt.check.footprint }] : [],
+    };
+    const apply = () => {
+      const source = m.getSource("placement-conflicts") as maplibregl.GeoJSONSource | undefined;
+      if (source) source.setData(conflictData);
+      else m.addSource("placement-conflicts", { type: "geojson", data: conflictData });
+      if (!m.getLayer("placement-conflicts-halo")) {
+        m.addLayer({ id: "placement-conflicts-halo", type: "line", source: "placement-conflicts", paint: { "line-color": "#a43b2d", "line-width": 6, "line-opacity": 0.2, "line-blur": 1 } });
+      }
+      if (!m.getLayer("placement-conflicts-line")) {
+        m.addLayer({ id: "placement-conflicts-line", type: "line", source: "placement-conflicts", paint: { "line-color": "#a43b2d", "line-width": 3, "line-dasharray": [2, 1] } });
+      }
+      const attemptSource = m.getSource("placement-attempt") as maplibregl.GeoJSONSource | undefined;
+      if (attemptSource) attemptSource.setData(attemptData);
+      else m.addSource("placement-attempt", { type: "geojson", data: attemptData });
+      if (!m.getLayer("placement-attempt-fill")) {
+        m.addLayer({ id: "placement-attempt-fill", type: "fill", source: "placement-attempt", paint: { "fill-color": ["case", ["==", ["get", "state"], "blocked"], "#a43b2d", ["==", ["get", "state"], "failed"], "#a43b2d", "#986013"], "fill-opacity": 0.16 } });
+      }
+      if (!m.getLayer("placement-attempt-line")) {
+        m.addLayer({ id: "placement-attempt-line", type: "line", source: "placement-attempt", paint: { "line-color": ["case", ["==", ["get", "state"], "blocked"], "#a43b2d", ["==", ["get", "state"], "failed"], "#a43b2d", "#986013"], "line-width": 3.5, "line-dasharray": [1.5, 1] } });
+      }
+    };
+    let tries = 0;
+    const run = () => {
+      try { apply(); }
+      catch { if (++tries < 3) m.once("idle", run); }
+    };
+    // isStyleLoaded() can stay false while raster tiles stream; wait for the
+    // next idle/load instead of silently dropping the attempt layers.
+    if (m.getSource("placement-attempt") || m.isStyleLoaded()) run();
+    else { m.once("load", run); m.once("idle", run); }
+    return () => { m.off("load", run); m.off("idle", run); };
+  }, [placementAttempt, placementChecks, placementEvidence, selectedIntervention]);
   useEffect(() => { renewableLayer.current?.setItems((interventions ?? []).filter(i=>placementChecks?.[i.id] && placementChecks[i.id]?.status !== "conflict" && placementChecks[i.id]?.status !== "unknown"), showInterventions !== false); }, [interventions, showInterventions, placementChecks]);
   useEffect(() => { if(focusArea)map.current?.easeTo({center:[focusArea.lon,focusArea.lat],zoom:15,pitch:terrain?45:0,duration:0}); }, [focusArea]);
+  // Camera-only recenter for a checked spot: keep the current area evidence and
+  // zoom level, but make the attempted footprint visible.
+  useEffect(() => { const m=map.current; if(focusPoint&&m)m.easeTo({center:[focusPoint.lon,focusPoint.lat],zoom:Math.max(m.getZoom(),15),duration:0}); }, [focusPoint]);
+  const attemptKinds = summarizeAttempt(placementAttempt?.check).kinds;
   return (
     <div className="map-view">
       <div ref={host} className="map-host" />
-      {(interventions ?? []).some(i => i.kind === 'solar_array' || i.kind === 'wind_turbine') && showInterventions !== false && <div className="renewable-model-note">Conflicting/unchecked 3D models are hidden; proposal pins remain. Solar = grouped tables; wind = one turbine. Illustrative dimensions, not engineering designs. Terrain anchoring uses loaded DEM; otherwise zero elevation.</div>}
+      {placementAttempt && (
+        <div className={`placement-attempt-banner ${placementAttempt.state}`} role="status">
+          <strong>
+            {placementAttempt.state === "checking"
+              ? `Checking ${placementAttempt.target.lat.toFixed(4)}, ${placementAttempt.target.lon.toFixed(4)}…`
+              : placementAttempt.state === "failed"
+                ? `Check failed · ${placementAttempt.target.lat.toFixed(4)}, ${placementAttempt.target.lon.toFixed(4)}`
+                : `Not placed · ${placementAttempt.target.lat.toFixed(4)}, ${placementAttempt.target.lon.toFixed(4)}`}
+          </strong>
+          <span>
+            {placementAttempt.state === "checking"
+              ? "Loading area evidence…"
+              : placementAttempt.state === "failed"
+                ? "Area evidence unavailable."
+                : `${attemptKinds.length ? attemptKinds.join(", ") : "mapped conflict"} · nothing saved`}
+          </span>
+          {onDismissPlacementAttempt && <button onClick={onDismissPlacementAttempt} aria-label="Dismiss spot check">×</button>}
+        </div>
+      )}
+      {(interventions ?? []).some(i => i.kind === 'solar_array' || i.kind === 'wind_turbine') && showInterventions !== false && !placementAttempt && <div className="renewable-model-note">Conflicting/unchecked 3D models are hidden; proposal pins remain. Solar = grouped tables; wind = one turbine. Illustrative dimensions, not engineering designs. Terrain anchoring uses loaded DEM; otherwise zero elevation.</div>}
+      {waterLevel != null && (
+        <div className="water-legend" role="note" aria-label="Water scenario legend">
+          <strong>Water-level scenario · {waterLevel.toFixed(1)} m</strong>
+          <span className="water-legend-band" aria-hidden="true" />
+          <span>Every DEM cell below this surface</span>
+          <small>
+            Terrain-only. Depth bands are illustrative; no river hydraulics,
+            timing, embankments or surveyed bathymetry.
+          </small>
+        </div>
+      )}
       <div className="basemap-control" role="group" aria-label="Basemap">
         <button type="button" aria-pressed={!satellite} onClick={() => setSatellite(false)}>Street</button>
         <button type="button" aria-pressed={satellite} onClick={() => setSatellite(true)}>Satellite</button>
@@ -448,7 +675,7 @@ export default function MapView({
               {NRSC_FLOOD_SNAPSHOTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           </label>
-          <small>Fixed observation date; independent of replay. Cyan: provider-mapped inundation. Unmarked/outside coverage: unknown. No depth or blockage evidence.</small>
+          <small>Fixed observation date; it loads only on that replay day. Cyan: provider-mapped inundation. Unmarked/outside coverage: unknown. No depth or blockage evidence.</small>
           {nrscSnapshot && <button type="button" onClick={() => map.current?.fitBounds([[NRSC_BOUNDS[0],NRSC_BOUNDS[1]],[NRSC_BOUNDS[2],NRSC_BOUNDS[3]]], { padding: 55, duration: 0 })}>View snapshot area</button>}
           <a href="/data/nrsc/manifest.json" target="_blank" rel="noreferrer">Source, bounds, dates &amp; fingerprints</a>
           <a href="https://www.nrsc.gov.in/nrscnew/termsConditions.php" target="_blank" rel="noreferrer">Source: NRSC, ISRO/DOS ? terms</a>

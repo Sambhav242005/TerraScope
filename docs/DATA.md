@@ -93,9 +93,16 @@ The script `scripts/refresh-nrsc-flood.py` explicitly fetches two 512?512 PNGs w
 
 Source: NRSC, ISRO/DOS ? https://www.nrsc.gov.in. Official selector: https://bhuvan-app1.nrsc.gov.in/disaster/usrtasks/flood/flood.php?uname=empty. Client request conventions: https://bhuvan-app1.nrsc.gov.in/disaster/usrtasks/flood/js/v16.js. Terms: https://www.nrsc.gov.in/nrscnew/termsConditions.php. Attributed non-commercial development snapshots only; no commercial/offline tile rights or production deployment clearance claimed.
 
-The observation date remains explicit and independent of historical discharge replay. Unmarked pixels, transparent areas and areas outside the snapshot are unknown, not dry or safe. Permanent-water handling, sensor/native resolution, detection error, masks and publication latency remain unverified. Two other inspected date/hour requests returned only the provider watermark and were excluded; absence of colored pixels was not interpreted as no flood. No temporal interpolation or flood animation is derived from these images.
+The observation date remains explicit. Since 14 November 2026, the Explore replay auto-loads a snapshot only when the selected replay day equals its own date (1 or 2 October 2024); other days show no NRSC overlay and nothing is interpolated. Unmarked pixels, transparent areas and areas outside the snapshot are unknown, not dry or safe. Permanent-water handling, sensor/native resolution, detection error, masks and publication latency remain unverified. Two other inspected date/hour requests returned only the provider watermark and were excluded; absence of colored pixels was not interpreted as no flood. No temporal interpolation or flood animation is derived from these images.
 
 CartoDEM download still requires the documented login flow; no authenticated tile was acquired. SISDP capabilities partially arrived before timeout and advertised DRAIN_PHASE_II bounds away from Sonpur; this is not verified drainage coverage for the pilot. No blockage, bathymetry, culvert or available-storage evidence is inferred. Existing Mapzen/OSM/Esri inputs remain identified by their actual sources; they were not relabeled as Indian data.
+
+## Replay map and terrain water scenario ? 14 November 2026
+
+Replay uses two already-connected series on the map. A labeled marker at the GloFAS sample cell (85.125 E, 25.775 N, provider elevation 52.0 m) shows that day's modeled discharge; its bar height is relative to the nine-day replayed window and is not a gauge reading, depth or extent. The NRSC snapshot follows the rule above: only its own date, no interpolation. Neither layer identifies a measured flood footprint or a safe/dry area.
+
+The water-level scenario is computed in the browser from Mapzen Terrarium DEM tiles (256 px, terrarium encoding, max zoom 15) restricted to the Gandak/Sonpur request bounds 84.75-85.55 E, 25.35-26.0 N. A MapLibre `color-relief` layer paints cells below a user-set flat surface (44-64 m, step 0.5, default 50 m) with interpolated blue bands for relative elevation below that surface. The surface is a user scenario input, not a stage predicted from discharge. There is no vertical-datum alignment, channel survey, bathymetry, embankment/routing model, timing or calibrated depth. The DEM includes buildings and vegetation as terrain, so shallow speckled cells can be surface objects rather than water; this is disclosed in the legend. No numerical result is exported from this layer.
+
 
 ## Derived placement-screening evidence ? 5 November 2026
 

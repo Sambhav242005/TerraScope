@@ -134,6 +134,10 @@ test('screening succeeds on a synthetic bowl and reports truthful provenance and
 
   assert.ok(run.candidates.length >= 1);
   const best = run.candidates[0];
+  assert.ok(best.profile, 'screening attaches a terrain transect');
+  assert.equal(best.profile.floorElevationM, best.minimumElevationM);
+  assert.equal(best.profile.spillElevationM, best.spillElevationM);
+  assert.ok(best.profile.points.some(p => p.elevationM === best.minimumElevationM));
   assert.ok(best.geometricCapacityM3 > 0, `capacity=${best.geometricCapacityM3}`);
   assert.ok(best.maximumDepthToSpillM > 3 && best.maximumDepthToSpillM < 13, `depth=${best.maximumDepthToSpillM}`);
   assert.ok(best.spillElevationM >= BASE_ELEVATION_M && best.spillElevationM <= BASE_ELEVATION_M + 1);

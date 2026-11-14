@@ -34,6 +34,8 @@ Field records stay on one device. No backend team assignment, media evidence, im
 
 ## Remaining work
 
+Candidate terrain inspection (14 November 2026; partial R03/R13/R14): `candidateProfile.ts` derives a bounded, deterministic transect from the same DEM grid and lowest cell used by screening. `CandidateProfileChart.tsx` and candidate details display floor/spill elevations in source DEM metres, distance in metres/kilometres and an accessible sample table. The full-depression spill point may lie outside the transect. Source provenance, resolution and retrieval remain attached to the screening run; vertical-datum alignment and real-site accuracy remain unverified. Missing samples produce no chart; malformed optional saved profiles are removed while retaining candidate records. Six profile tests plus storage-search integration assertions pass within the 98-test suite; production build passes with its existing bundle warning. No browser or physical-phone verification for this slice. Existing scientific and autonomous-service gaps remain open.
+
 TODO.md preserves the full research gates: choose/review the final historical event; obtain surveys, gauges and independent labels; freeze an evaluation protocol; select/calibrate/validate a solver; test held-out events/non-events and official/simple baselines; obtain approved local guidance; add authenticated team evidence and an authorized AI provider; test a real phone; review terms and competition requirements before any authorized publication.
 
 No deployment, entry submission, messages to field teams or public warnings were performed.
@@ -44,3 +46,11 @@ Final production check: the thirteen browser checks also passed against the buil
 ## Visual history revision — 4 November 2026
 
 New default River history passes nine browser checks in tests/history-check.mjs: ten-year data/120 tiles, synchronized flow rise, leap years, peak selection, replay/pause, full export, circle removal, 360px layout and no unhandled errors. Existing thirteen workflow checks also pass with explicit Explore navigation. Production build passes. Evidence: artifacts/history-report.json; artifacts/history-desktop.png; artifacts/history-mobile.png; artifacts/history-video. No physical-phone or inundation validation claim. The requested actual mapped flood-rise/spread visualization is still outstanding.
+
+## Replay and terrain water scenario - 14 November 2026
+
+The Explore replay now changes the map, not only the rainfall/flow numbers. Advancing the replay day updates a labeled GloFAS sample-cell marker at 85.125 E, 25.775 N with the modeled discharge for that day; its small bar is relative to the replayed nine-day window, not depth or extent. On the two dates that have a provider snapshot (1 and 2 October 2024) the NRSC observed raster auto-loads and is removed on other days. Nothing is interpolated between archived dates.
+
+A separate water-level control (off by default) paints every DEM cell below a user-set 44-64 m surface over the Gandak/Sonpur view, using an interpolated color ramp for relative depth bands. It is explicitly terrain-only: there is no stage-discharge solver, vertical datum, bathymetry, embankment routing or timing. It is a scenario visualization, not a forecast or an operational flood map, and the DEM includes buildings/vegetation as terrain.
+
+The stacked headers were merged into one 84px header (brand/source row plus a 29px context strip) and the map summary, layer toggle, command row and timeline were compacted. Timeline height is 158px; the water control sits in its third column. Evidence: artifacts/replay-ui-1-initial.png, artifacts/replay-ui-2-water.png, artifacts/replay-ui-3-nrsc.png, artifacts/replay-ui-4-1024.png, artifacts/replay-ui-5-360.png, artifacts/replay-ui-6-3d.png and artifacts/replay-simulation-gallery.html. Build passes; 92 unit tests pass; flood-check 13/13, placement-iterative 5/5, placement-validation 7 checks, world-check 6/6, NRSC, search/area/collision and the iterative placement suite pass. 1024px and 360px captures have no horizontal overflow. No physical-phone performance or scientific validation claim.

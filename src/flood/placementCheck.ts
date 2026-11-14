@@ -24,7 +24,7 @@ export type PlacementEvidence = { sources: EvidenceSource[]; features: EvidenceF
 export type PlacementCheck = {
   status: "conflict" | "investigate" | "unknown";
   headline: string;
-  findings: Array<{ kind: string; message: string; featureIds: string[]; sourceIds: string[] }>;
+  findings: Array<{ kind: string; message: string; labels?: string[]; featureIds: string[]; sourceIds: string[] }>;
   unknowns: string[];
   footprint: Polygon;
   footprintMethod: string;
@@ -164,7 +164,7 @@ export function checkPlacement(item: Intervention, evidence: PlacementEvidence |
     }
     const labels = [...hit.labels].sort();
     if (labels.length) message += ` Mapped feature names: ${labels.slice(0, 3).join(", ")}${labels.length > 3 ? ", and others" : ""}.`;
-    return { kind, message, featureIds: [...hit.features].sort(), sourceIds: [...hit.sources].sort() };
+    return { kind, message, labels, featureIds: [...hit.features].sort(), sourceIds: [...hit.sources].sort() };
   });
   if (!sourceMap.size) unknowns.push("No mapped evidence sources are available for this placement.");
   unknowns.push("No mapped overlap is not proof of no hazard: map completeness, positional accuracy and current conditions are unverified.");

@@ -30,6 +30,11 @@ import {
   type GeoPolygon,
 } from "./candidateGeometry.ts";
 import { extractWaterFeatures, osmMapApiUrl, type WaterFeature } from "./osmWater.ts";
+import {
+  candidateTerrainProfile,
+  isCandidateTerrainProfile,
+  type CandidateTerrainProfile,
+} from "./candidateProfile.ts";
 
 export type ScreeningConfig = {
   center: { lat: number; lon: number };
@@ -79,6 +84,9 @@ export type StoredCandidate = {
   availableStorageM3: null;
   suitability: "unassessed";
   waterEvidence: WaterEvidence;
+  /** DEM transect through the lowest cell, for inspecting the bowl. Absent
+   * in records saved before this field existed; re-run to compute it. */
+  profile?: CandidateTerrainProfile | null;
 };
 
 export type StoredWater = {
@@ -438,6 +446,17 @@ export async function runStorageScreening(
       croppedSkipped += 1;
       return;
     }
+    const profile = candidateTerrainProfile({
+      width: plan.width,
+      height: plan.height,
+      elevationsM: elevations,
+      cellIndices: c.cellIndices,
+      cellWidthM: plan.meterPerPxLon,
+      cellHeightM: plan.meterPerPxLat,
+      spillElevationM: c.spillElevationM,
+      toLonLat: (col, row) => cellCenterLonLat(plan, col, row),
+      maxPoints: 36,
+    });
     drafts.push({
       id: c.id,
       label: `Terrain depression ${i + 1}`,
@@ -452,6 +471,7 @@ export async function runStorageScreening(
       availableStorageM3: null as null,
       suitability: "unassessed" as const,
       waterEvidence: evidenceFor(c.cellIndices),
+      profile,
       order: i,
     });
   });
@@ -475,6 +495,7 @@ export async function runStorageScreening(
     availableStorageM3: null,
     suitability: "unassessed",
     waterEvidence: d.waterEvidence,
+    profile: d.profile ?? null,
   }));
 
   record.status = "succeeded";
@@ -617,6 +638,9 @@ export function loadStorageRun(): ScreeningRun | null {
       }));
       v.limitations = [...(v.limitations ?? []), "Legacy mapped-water overlap counts are unavailable; re-run screening to calculate unique-cell counts (water evidence v2)."];
     }
+    v.candidates = v.candidates.map((c: StoredCandidate) => ({
+      ...c, profile: isCandidateTerrainProfile(c.profile) ? c.profile : null,
+    }));
     return v as ScreeningRun;
   } catch {
     return null;

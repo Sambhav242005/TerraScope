@@ -1,6 +1,9 @@
 ﻿import type {PlacementEvidence, EvidenceFeature} from './placementCheck.ts';
 import {osmMapApiUrl} from './storage/osmWater.ts';
 export function areaBounds(c:{lat:number;lon:number}):[number,number,number,number]{const dy=2/111.132,dx=2/(111.32*Math.cos(c.lat*Math.PI/180));return [Math.max(-180,c.lon-dx),Math.max(-85,c.lat-dy),Math.min(180,c.lon+dx),Math.min(85,c.lat+dy)];}
+/** Stable identity for an evidence fetch area. Five decimals is about 1 m;
+ *  finer keys would defeat retry caching without changing the 2 km box. */
+export function placementAreaKey(c:{lat:number;lon:number}):string{return `${c.lat.toFixed(5)},${c.lon.toFixed(5)}`;}
 export function parseAreaEvidence(doc:unknown,box:[number,number,number,number],url:string,retrievedAt:string,sha256:string):PlacementEvidence{
  if(!doc||!Array.isArray((doc as any).elements))throw Error('Invalid map extract');
  const elements=(doc as any).elements,nodes=new Map<number,[number,number]>();for(const n of elements)if(n.type==='node'&&Number.isFinite(n.lon)&&Number.isFinite(n.lat))nodes.set(n.id,[n.lon,n.lat]);
