@@ -41,6 +41,18 @@ import EnsoContext from "./flood/EnsoContext";
 import Findings from "./flood/Findings";
 import { loadHistorySeries, type HistoryRow } from "./flood/historySeries";
 import {
+  DEFAULT_BUDGET,
+  cancel as harnessCancel,
+  complete as harnessComplete,
+  enqueue as harnessEnqueue,
+  fail as harnessFail,
+  heartbeat as harnessHeartbeat,
+  loadJobs,
+  recoverStale,
+  saveJobs,
+  start as harnessStart,
+} from "./flood/harness";
+import {
   buildOnboardingReport,
   ONBOARDING_LIMITS,
   type OnboardingReport,
@@ -328,6 +340,25 @@ export default function App() {
     storageTiles = useRef<Map<string, Uint8ClampedArray>>(
       new globalThis.Map(),
     );
+  // Durable harness (R17): deterministic storage screening runs under a
+  // persisted job record with budgets, heartbeat and a separate output verifier.
+  const harnessState = useRef(
+    typeof window !== "undefined"
+      ? loadJobs(window.localStorage, "terrascope.harness.v1")
+      : { jobs: [], events: [] },
+  );
+  const harnessJobId = useRef<string | null>(null);
+  const [harnessLine, setHarnessLine] = useState("");
+  const persistHarness = () => {
+    if (typeof window === "undefined") return;
+    saveJobs(window.localStorage, "terrascope.harness.v1", harnessState.current);
+  };
+  useEffect(() => {
+    // Restart recovery: stale running jobs from a previous session are requeued or failed.
+    harnessState.current = recoverStale(harnessState.current, new Date(), 120_000);
+    persistHarness();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     try {
       localStorage.setItem("terrascope-draft", draft);
@@ -418,6 +449,27 @@ export default function App() {
     setStorageBusy(true);
     setStoragePhase("Terrain tiles…");
     if (storageTiles.current.size > 120) storageTiles.current.clear();
+    // Enqueue the screen under the harness. Idempotent for an identical input:
+    // an already-open job (queued or running) is reused, never duplicated.
+    harnessJobId.current = null;
+    try {
+      const input = {
+        lat: next.lat,
+        lon: next.lon,
+        configHash: configHash({ center: next, ...DEFAULT_SCREENING_CONFIG }),
+      };
+      const res = harnessEnqueue(harnessState.current, "storage-screening", input, DEFAULT_BUDGET, new Date());
+      harnessState.current = res.state;
+      const job = res.job;
+      if (job.status === "queued") {
+        harnessState.current = harnessStart(harnessState.current, job.id, new Date());
+      }
+      harnessJobId.current = job.id;
+      persistHarness();
+    } catch (err) {
+      // A harness rejection never blocks the run itself.
+      console.error("Harness could not track this run", err);
+    }
     runStorageScreening(
       { center: next, ...DEFAULT_SCREENING_CONFIG },
       {
@@ -425,18 +477,51 @@ export default function App() {
         fetchTile: fetchTerrariumTileRGBA,
         fetchWaterJson: fetchOsmWaterJson,
         tilesCache: storageTiles.current,
-        onProgress: (p) =>
+        onProgress: (p) => {
           setStoragePhase(
             p.phase === "terrain"
               ? `Terrain tiles ${p.tilesDone}/${p.tilesTotal}…`
               : p.phase === "analysing"
                 ? "Screening depressions…"
                 : "Fetching mapped water…",
-          ),
+          );
+          if (harnessJobId.current) {
+            harnessState.current = harnessHeartbeat(
+              harnessState.current,
+              harnessJobId.current,
+              { tilesFetched: p.tilesDone, tilesTotal: p.tilesTotal },
+              new Date(),
+            );
+            persistHarness();
+          }
+        },
       },
     )
       .then((run) => {
         if (controller.signal.aborted) return;
+        if (harnessJobId.current) {
+          const result = harnessComplete(
+            harnessState.current,
+            harnessJobId.current,
+            {
+              status: run.status,
+              runId: run.id,
+              configHash: run.configHash,
+              method: run.provenance.method,
+              tilesFetched: run.tilesFetched,
+              tilesTotal: run.tilesTotal,
+              candidateCountTotal: run.candidateCountTotal,
+            },
+            new Date(),
+          );
+          harnessState.current = result.state;
+          persistHarness();
+          setHarnessLine(
+            result.ok
+              ? `Harness ${harnessJobId.current.slice(0, 18)} · verified`
+              : `Harness verification failed: ${result.errors.join("; ")}`,
+          );
+        }
         setStorageRun(run);
         setStorageWater(run.water);
         setStorageBusy(false);
@@ -453,6 +538,17 @@ export default function App() {
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
+        if (harnessJobId.current) {
+          const message = String((err as Error).message ?? err);
+          harnessState.current = harnessFail(
+            harnessState.current,
+            harnessJobId.current,
+            message,
+            new Date(),
+          );
+          persistHarness();
+          setHarnessLine(`Harness job failed: ${message}`);
+        }
         setStorageBusy(false);
         setStoragePhase("");
         setNotice(
@@ -462,6 +558,11 @@ export default function App() {
   }
   function cancelStorage() {
     storageAbort.current?.abort();
+    if (harnessJobId.current) {
+      harnessState.current = harnessCancel(harnessState.current, harnessJobId.current, new Date());
+      persistHarness();
+      setHarnessLine("Harness job cancelled");
+    }
     setStorageBusy(false);
     setStoragePhase("");
     setNotice("Storage screening cancelled. No results were produced.");
@@ -1590,6 +1691,9 @@ export default function App() {
             {storageRun?.status === "succeeded" && (
               <details className="storage-run">
                 <summary>Run provenance</summary>
+                {harnessLine && (
+                  <small className="harness-line">{harnessLine}</small>
+                )}
                 <small>
                   Method {storageRun.provenance.method} · schema{" "}
                   {storageRun.schema} · config {storageRun.configHash} · run{" "}

@@ -3027,3 +3027,6 @@ button.enso-badge:focus-visible { outline: 3px solid #216890; outline-offset: 2p
 .enso-advisory { border: 1px solid #e8d9b8; background: #fffdf4; border-radius: 10px; padding: 10px 14px; margin: 8px 0 14px; }
 .advisory-status { font-size: 12px; color: #6f5514; margin: 0 0 6px; }
 .enso-advisory q { color: #5c4a12; }
+
+/* Durable harness status line (R17) */
+.harness-line { display: block; color: #496a59; border-left: 2px solid #6a9cc6; padding-left: 8px; margin-bottom: 4px; }

@@ -1,6 +1,6 @@
 # Delivery record — TerraScope prototype
 
-> Current status (14 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R08, R10, R15 and R16 were delivered on 14 November 2026; the other requirements remain active.
+> Current status (14 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R08, R10, R15, R16 and R17 were delivered on 14 November 2026; the other requirements remain active.
 
 
 Date: 4 November 2026. Status: functional local software prototype; broader scientific/competition release gates remain open.
@@ -70,6 +70,20 @@ Three requirements advanced to delivered in one pass:
 
 Evidence: `tests/enso-analogs.test.js`, `tests/findings.test.js`, `tests/data-onboarding.test.js` (suite 141/141); `tests/context-checks.mjs` — 23 headless browser checks pass against the production preview (findings card with 6 auto items, ENSO panel contents and focus handling, onboarding section verdicts, 360px no overflow, no console/page errors); flood-check 13/13; production build passes. Artifacts: artifacts/context-checks-report.json, artifacts/enso-findings-desktop.png, artifacts/enso-findings-360.png. Not delivered: issue-time outlook is used only as dated context (never as an input — the 12 Nov 2026 advisory states El Niño Advisory with ~79% chance of >+2.5°C through Jan–Mar 2027, but nothing in this app computes from it); R15/R16 have no background service (findings are derived inline in-session; full change-driven background refresh remains open); R07 remains open — see docs/research/renewable-evidence-matrix.md (new research document, does not close R07); R13 (phone), R12/R17 (local model/harness) and R01/R06 remain open.
 
+
+## Durable execution harness - 14 November 2026 (R17)
+
+The deterministic storage-screening tool now runs under a persisted local harness (`src/flood/harness.ts`). Jobs carry an ID, input hash, registered tool scope, attempts, wall-clock/tile budgets, heartbeat and checkpoints, an append-only event log and a completion stage gated by a verifier that is separate from the producer.
+
+- Scope registry: only `storage-screening` → `priority-flood-d8-v1` may run under the harness; any other kind fails at enqueue. Deterministic jobs stay code — no LLM calls are made by the harness.
+- Idempotency: `enqueue` reuses an open job for the same kind+input instead of duplicating it; cancelled jobs do not block re-enqueue.
+- Restart recovery: `recoverStale` requeues stale running jobs (respecting the attempt budget) or fails them; it runs on app mount. Corrupted persisted caches are discarded, never interpreted.
+- Budgets: wall-clock, tile count and max attempts are enforced in heartbeats; exhaustion fails the job with a recorded reason rather than hanging or degrading silently.
+- Verification: `verifyJobOutput` checks run ID, config-hash format, pinned method, tile completeness on success and totals sanity; a claim of success with missing tiles, wrong method, missing run ID or cancelled status cannot publish. Older succeeded jobs for the same input are marked superseded (retained, never deleted).
+- Events: append-only (`enqueued`, `enqueue-reused`, `started`, `verified`, `failed`, `cancelled`, `recovered`, `completion-rejected`), bounded to 200 in storage.
+- App wiring: the auto storage screening enqueues/starts/heartbeats/completes a harness job with the run; the run-provenance panel renders "Harness <job> · verified" or the verification failure; cancel propagates. A real browser run on 14 Nov 2026 (909 tiles, real terrain fetch) produced job `harness-5055cb92-1` → `succeeded`, events enqueued → started → verified, persisted in localStorage key `terrascope.harness.v1`.
+
+Evidence: `tests/harness.test.js` (21 adversarial tests: idempotent enqueue, scope rejection, heartbeat/tile/wall-clock budgets, verifier rejection of bad outputs, supersession, stale recovery, corrupt caches, roundtrip, cancellation); suite 162/162; production build passes; flood-check 13/13. Honest limits: exactly one registered harness tool (no LLM workers — that is by design per docs/AGENT_HARNESS.md: deterministic jobs stay code); no background service — the harness executes in-session inside the browser tab; live network auto-retry between jobs is deliberately not wired (an exhausted attempt budget fails the job; the user re-triggers explicitly); recovery after a hard browser kill relies on `recoverStale` on next mount, not on a live daemon.
 
 ## Replay and terrain water scenario - 14 November 2026
 
