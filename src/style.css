@@ -2987,3 +2987,43 @@ details.storage-run summary {
   .result-timeline-controls { gap: 6px; }
   .result-timeline-controls select { max-width: 100%; }
 }
+
+/* ENSO climate context (R08) */
+button.enso-badge { cursor: pointer; font: inherit; text-align: inherit; }
+button.enso-badge:hover { background: #e8efe6; }
+button.enso-badge:focus-visible { outline: 3px solid #216890; outline-offset: 2px; }
+.enso-2024-row { background: #fdf6e3; }
+.enso-2024-row th, .enso-2024-row td { font-weight: 600; }
+.enso-limits { font-size: 11px; line-height: 1.8; color: #83917a; padding-left: 18px; margin: 8px 0 12px; }
+.enso-links { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; }
+.enso-legend { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #6a7d71; margin-bottom: 12px; }
+
+/* Data onboarding and dependency tracking (R16) */
+.onboarding-report { margin: 18px 0; }
+.onboarding-report summary { cursor: pointer; font-weight: 650; color: #26381f; padding-block: 6px; }
+.onboarding-report summary:focus-visible { outline: 3px solid #216890; outline-offset: 2px; }
+.onboarding-summary { font-variant-numeric: tabular-nums; color: #33483b; margin: 8px 0; }
+.onboarding-detail { white-space: normal; }
+.onboarding-pass td { }
+.onboarding-warn { background: #fff8e1; }
+.onboarding-fail { background: #fbe9dd; }
+.onboarding-limits { font-size: 11px; line-height: 1.7; color: #83917a; padding-left: 18px; margin: 8px 0 0; }
+
+/* Findings card (R15) - auto, after area selection */
+.findings-card { margin: 0 0 14px; border: 1px solid #e3e8df; border-radius: 10px; background: #fdfdf8; padding: 8px 12px; }
+.findings-card summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 650; color: #26381f; padding-block: 4px; list-style: none; }
+.findings-card summary::-webkit-details-marker { display: none; }
+.finding-count { margin-inline-start: auto; background: #e2eff3; color: #175170; border-radius: 999px; font-size: 10px; padding: 2px 8px; font-variant-numeric: tabular-nums; }
+.finding-disclaimer { font-size: 10px; color: #6a7d71; margin: 4px 0 8px; }
+.findings-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 380px; overflow-y: auto; }
+.finding { border-left: 3px solid #21849a; background: #ffffff; border: 1px solid #dfe7df; border-left-width: 3px; border-radius: 8px; padding: 6px 10px; }
+.finding-watch { border-left-color: #c25b3a; }
+.finding-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: #26381f; }
+.finding-detail { font-size: 11px; line-height: 1.5; color: #33483b; margin: 3px 0; }
+.finding-evidence { display: block; font-size: 10px; color: #6a7d71; }
+.finding-enso-button { margin-top: 8px; }
+
+/* ENSO outlook advisory box (issue-time context) */
+.enso-advisory { border: 1px solid #e8d9b8; background: #fffdf4; border-radius: 10px; padding: 10px 14px; margin: 8px 0 14px; }
+.advisory-status { font-size: 12px; color: #6f5514; margin: 0 0 6px; }
+.enso-advisory q { color: #5c4a12; }

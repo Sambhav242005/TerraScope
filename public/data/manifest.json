@@ -112,7 +112,8 @@
       85.125,
       25.775002
     ],
-    "uncertainty": "Sample-cell estimates. No gauge validation, river assignment verification, flood depth or extent. Historical values are not advance forecasts."
+    "uncertainty": "Sample-cell estimates. No gauge validation, river assignment verification, flood depth or extent. Historical values are not advance forecasts.",
+    "processing": "Daily historical modeled discharge retained unchanged from the Open-Meteo response; no regridding, gap filling or recalibration."
   },
   {
     "id": "rain-history",
@@ -133,7 +134,8 @@
       84.25,
       26.5
     ],
-    "uncertainty": "Sample-cell estimates. No gauge validation, river assignment verification, flood depth or extent. Historical values are not advance forecasts."
+    "uncertainty": "Sample-cell estimates. No gauge validation, river assignment verification, flood depth or extent. Historical values are not advance forecasts.",
+    "processing": "Daily precipitation sums in mm retained unchanged from the Open-Meteo response; no regridding, gap filling or recalibration."
   },
   {
     "id": "scene-geometry",
@@ -142,6 +144,7 @@
     "retrieved": "2026-11-04",
     "status": "downloaded; derived visual geometry",
     "license": "ODbL, OpenStreetMap contributors",
+    "provider": "OpenStreetMap contributors (bounded extract, 85.14–85.19E, 25.68–25.73N)",
     "units": "WGS84 degrees; illustrative object heights in metres",
     "resolution": "Mapped footprints, not surveyed 3D assets",
     "timezone": "not applicable",

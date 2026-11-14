@@ -37,6 +37,14 @@ import {
 import MapView from "./flood/MapView";
 import RiverHistory from "./flood/RiverHistory";
 import ResultTimeline from "./flood/ResultTimeline";
+import EnsoContext from "./flood/EnsoContext";
+import Findings from "./flood/Findings";
+import { loadHistorySeries, type HistoryRow } from "./flood/historySeries";
+import {
+  buildOnboardingReport,
+  ONBOARDING_LIMITS,
+  type OnboardingReport,
+} from "./flood/dataOnboarding";
 import WorldMap from "./flood/WorldMap";
 import { CandidateProfileChart } from "./flood/storage/CandidateProfileChart";
 import {
@@ -271,6 +279,8 @@ export default function App() {
     [sources, setSources] = useState(false),
     [showTable, setShowTable] = useState(false),
     [showResults, setShowResults] = useState(false),
+    [showEnso, setShowEnso] = useState(false),
+    [historyRows, setHistoryRows] = useState<HistoryRow[] | null>(null),
     [showGuide, setShowGuide] = useState(false),
     [showAssets, setShowAssets] = useState(true),
     [terrain, setTerrain] = useState(true),
@@ -496,7 +506,17 @@ export default function App() {
     return () => clearInterval(timer);
   }, [playing]);
   useEffect(() => {
-    if (!sources && !showTable && !showGuide) return;
+    let live = true;
+    loadHistorySeries().then(
+      (rows) => live && setHistoryRows(rows),
+      () => live && setHistoryRows(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!sources && !showTable && !showGuide && !showEnso) return;
     const old = document.activeElement as HTMLElement;
     const dialog = dialogRef.current;
     const items = () =>
@@ -511,6 +531,7 @@ export default function App() {
         setSources(false);
         setShowTable(false);
         setShowGuide(false);
+        setShowEnso(false);
       }
       if (e.key === "Tab") {
         const a = items();
@@ -528,7 +549,13 @@ export default function App() {
       document.removeEventListener("keydown", handler);
       old?.focus();
     };
-  }, [sources, showTable]);
+  }, [sources, showTable, showGuide, showEnso]);
+  const onboarding: OnboardingReport | null = useMemo(
+    () => (manifest.length ? buildOnboardingReport(manifest, new Date()) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [manifest],
+  );
+  const onboardingLimits = ONBOARDING_LIMITS;
   const assets = useMemo(() => [...osm, ...saved.custom], [osm, saved.custom]);
   const nearby = useMemo(
     () => assets.filter((a) => distanceKm(a, saved.area) <= saved.radius),
@@ -931,13 +958,25 @@ export default function App() {
           <strong>Gandak river corridor</strong>
           <span className="case-location">Bihar, India</span>
         </div>
-        <div className="enso-badge" title={enso.notes}>
+        <button
+          type="button"
+          className="enso-badge"
+          title={`${enso.notes} — open the dated ENSO climate context`}
+          aria-haspopup="dialog"
+          aria-expanded={showEnso}
+          onClick={() => {
+            setSources(false);
+            setShowTable(false);
+            setShowGuide(false);
+            setShowEnso((v) => !v);
+          }}
+        >
           <span className="enso-dot" style={{ backgroundColor: ensoColor }} />
           <strong>ENSO: {enso.phase} ({enso.year})</strong>
           <span className="enso-sub">
             ONI: {enso.oniAnomalyC > 0 ? `+${enso.oniAnomalyC}` : enso.oniAnomalyC}°C
           </span>
-        </div>
+        </button>
         <div>
           <span className="mode-pill">Historical data replay</span>
           <span className="case-date">
@@ -1343,6 +1382,7 @@ export default function App() {
                     : "Turn the available evidence into a reviewable preparation checklist."}
             </p>
           </div>
+          {tab === "Explore" && <Findings historyRows={historyRows} manifest={manifest} storageRun={storageRun} proposalCount={(saved.interventions ?? []).length} replayDate={days[day]} ensoYear={2024} onOpenEnso={() => { setSources(false); setShowTable(false); setShowGuide(false); setShowEnso(true); }} />}
           <section className="storage-panel" aria-label="Natural water-storage screening">
             <div className="storage-head">
               <Droplets size={16} />
@@ -2369,6 +2409,63 @@ export default function App() {
                     </article>
                   ))}
                 </div>
+                <details className="onboarding-report">
+                  <summary>Data onboarding and dependency tracking (R16)</summary>
+                  <p className="small-copy">
+                    Every dataset the workspace uses is registered with its schema contract, coverage,
+                    freshness policy and consumers. Checks below run against the loaded manifest; a stale
+                    current-mapping layer blocks nothing silently — it reports warn/fail here.
+                  </p>
+                  {onboarding ? (
+                    <>
+                      <p className="onboarding-summary" role="note">
+                        {onboarding.summary.pass} pass · {onboarding.summary.warn} warn · {onboarding.summary.fail} fail · {onboarding.summary.notApplicable} n/a (generated {new Date(onboarding.generatedAt).toLocaleString("en-GB")})
+                      </p>
+                      <div className="table-scroll">
+                        <table>
+                          <caption>Per-dataset onboarding checks</caption>
+                          <thead>
+                            <tr><th scope="col">Dataset</th><th scope="col">Check</th><th scope="col">Verdict</th><th scope="col">Detail</th></tr>
+                          </thead>
+                          <tbody>
+                            {onboarding.checks.map((c, i) => (
+                              <tr key={`${c.dataset}-${c.check}-${i}`} className={`onboarding-${c.verdict}`}>
+                                <th scope="row">{c.dataset}</th>
+                                <td>{c.check}</td>
+                                <td>{c.verdict}</td>
+                                <td className="onboarding-detail">{c.detail}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="table-scroll">
+                        <table>
+                          <caption>Who consumes each dataset</caption>
+                          <thead>
+                            <tr><th scope="col">Dataset</th><th scope="col">Used by</th><th scope="col">Load-bearing</th></tr>
+                          </thead>
+                          <tbody>
+                            {onboarding.dependencies.map((d) => (
+                              <tr key={d.dataset}>
+                                <th scope="row">{d.dataset}</th>
+                                <td className="onboarding-detail">{d.usedBy.join(" · ")}</td>
+                                <td>{d.loadBearing ? "yes" : "no"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <ul className="onboarding-limits">
+                        {onboardingLimits.map((l) => (
+                          <li key={l}>{l}</li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <p className="small-copy">Onboarding report unavailable (manifest not loaded).</p>
+                  )}
+                </details>
                 <h3>What is still needed</h3>
                 <p>
                   Surveyed channels, embankment levels, independent event flood
@@ -2463,6 +2560,26 @@ export default function App() {
             )}
             </>
             )}
+          </div>
+        </div>
+      )}
+      {showEnso && (
+        <div className="modal-backdrop">
+          <div
+            className="modal"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="ENSO climate context"
+          >
+            <button
+              className="modal-close"
+              onClick={() => setShowEnso(false)}
+              aria-label="Close dialog"
+            >
+              <X size={21} />
+            </button>
+            <EnsoContext onClose={() => setShowEnso(false)} />
           </div>
         </div>
       )}

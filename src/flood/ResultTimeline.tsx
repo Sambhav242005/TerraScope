@@ -7,7 +7,7 @@ import {
   type ResultEntry,
   type ResultState,
 } from "./resultTimelineCore";
-import { joinHistory } from "./RiverHistory";
+import { loadHistorySeries, type HistoryRow } from "./historySeries";
 import type { ScreeningRun } from "./storage/storageSearch";
 import type { Intervention } from "./intervention";
 
@@ -78,26 +78,21 @@ export default function ResultTimeline({
 }) {
   const [mode, setMode] = useState<"event" | "history">("event");
   const [year, setYear] = useState("2024");
-  const [rows, setRows] = useState<Array<{ date: string; flow: number | null; rain: number | null }> | null>(null);
+  const [rows, setRows] = useState<HistoryRow[] | null>(null);
   const [historyError, setHistoryError] = useState("");
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (mode !== "history" || rows) return;
     let live = true;
-    Promise.all(
-      ["flow-history", "rain-history"].map(async (name) => {
-        const r = await fetch(`/data/${name}.json`);
-        if (!r.ok) throw new Error("History dataset could not be loaded.");
-        return r.json();
-      }),
-    )
-      .then(([f, r]) => {
-        if (live) setRows(joinHistory(f, r));
-      })
-      .catch((e: Error) => {
+    loadHistorySeries().then(
+      (data) => {
+        if (live) setRows(data);
+      },
+      (e: Error) => {
         if (live) setHistoryError(e.message);
-      });
+      },
+    );
     return () => {
       live = false;
     };

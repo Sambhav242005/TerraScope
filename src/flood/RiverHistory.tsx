@@ -11,14 +11,8 @@ import {
   Waves,
 } from "lucide-react";
 import "./history.css";
-type Series = {
-  daily: {
-    time: string[];
-    river_discharge?: (number | null)[];
-    precipitation_sum?: (number | null)[];
-  };
-};
-type Row = { date: string; flow: number | null; rain: number | null };
+import { loadHistorySeries } from "./historySeries";
+type Row = import("./historyJoin").HistoryRow;
 const number = (v: number | null | undefined) =>
   v == null
     ? "Unavailable"
@@ -37,27 +31,7 @@ const months = [
   "Nov",
   "Dec",
 ];
-const valid = (x: unknown): x is number | null =>
-  x === null || (typeof x === "number" && Number.isFinite(x) && x >= 0);
-export function joinHistory(flow: Series, rain: Series): Row[] {
-  const values = flow.daily?.river_discharge,
-    rains = rain.daily?.precipitation_sum;
-  if (
-    !values ||
-    !rains ||
-    flow.daily.time.length !== values.length ||
-    rain.daily.time.length !== rains.length ||
-    !values.every(valid) ||
-    !rains.every(valid)
-  )
-    throw Error("Invalid historical values");
-  const byDate = new Map(rain.daily.time.map((d, i) => [d, rains[i]]));
-  return flow.daily.time.map((date, i) => ({
-    date,
-    flow: values[i],
-    rain: byDate.get(date) ?? null,
-  }));
-}
+
 export default function RiverHistory({
   onMap,
   onSources,
@@ -74,20 +48,14 @@ export default function RiverHistory({
     [step, setStep] = useState(1);
   useEffect(() => {
     let live = true;
-    Promise.all(
-      ["flow-history", "rain-history"].map(async (name) => {
-        const r = await fetch(`/data/${name}.json`);
-        if (!r.ok) throw Error("History dataset could not be loaded.");
-        return r.json() as Promise<Series>;
-      }),
-    )
-      .then(([f, r]) => {
-        const data = joinHistory(f, r);
+    loadHistorySeries().then(
+      (data) => {
         if (live) setRows(data);
-      })
-      .catch((e) => {
+      },
+      (e: Error) => {
         if (live) setError(e.message);
-      });
+      },
+    );
     return () => {
       live = false;
     };
