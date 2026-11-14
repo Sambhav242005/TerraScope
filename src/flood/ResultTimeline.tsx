@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, CloudRain, History, Waves, X } from "lucide-react";
 import {
   buildResultTimeline,
@@ -59,6 +59,8 @@ export default function ResultTimeline({
   interventions,
   onOpenHistory,
   onClose,
+  open,
+  onOpen,
 }: {
   days: string[];
   dailyRain: Array<number | null>;
@@ -69,11 +71,16 @@ export default function ResultTimeline({
   interventions: Intervention[];
   onOpenHistory: () => void;
   onClose: () => void;
+  /** Controls the `hidden="until-found"` panel rather than mounting/unmounting it, so in-page find can reveal it. */
+  open: boolean;
+  /** Called when the browser reveals the panel via find-in-page (beforematch). */
+  onOpen: () => void;
 }) {
   const [mode, setMode] = useState<"event" | "history">("event");
   const [year, setYear] = useState("2024");
   const [rows, setRows] = useState<Array<{ date: string; flow: number | null; rain: number | null }> | null>(null);
   const [historyError, setHistoryError] = useState("");
+  const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (mode !== "history" || rows) return;
@@ -95,6 +102,18 @@ export default function ResultTimeline({
       live = false;
     };
   }, [mode, rows]);
+
+  // Keep the panel mounted and collapse it with hidden="until-found" so in-page
+  // find can reveal it; sync the App toggle from beforematch.
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const reveal = () => onOpen();
+    el.addEventListener("beforematch", reveal);
+    if (open) el.removeAttribute("hidden");
+    else el.setAttribute("hidden", "until-found");
+    return () => el.removeEventListener("beforematch", reveal);
+  }, [open, onOpen]);
 
   const entries = useMemo(
     () =>
@@ -123,32 +142,32 @@ export default function ResultTimeline({
   );
 
   return (
-    <section className="result-timeline" role="region" aria-label="Scenario result timeline" id="result-timeline">
-      <div className="result-timeline-head">
-        <span className="result-timeline-title">
-          <History size={14} aria-hidden="true" />
-          Scenario result timeline
-        </span>
-        <div className="result-timeline-controls">
-          <label className="sr-only result-event-label" htmlFor="result-event-picker">Event / year context</label>
-          <select
-            id="result-event-picker"
-            aria-label="Event or year context"
-            value={mode}
-            onChange={(e) => setMode(e.target.value as "event" | "history")}
-          >
-            <option value="event">Sep–Oct 2024 event replay (25 Sep – 3 Oct)</option>
-            <option value="history">2015–2024 multiyear history (daily)</option>
-          </select>
-          <button type="button" className="text-action" onClick={onOpenHistory}>
-            Open interactive history
-            <ArrowUpRight size={13} aria-hidden="true" />
-          </button>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Hide scenario result timeline">
-            <X size={16} aria-hidden="true" />
-          </button>
+    <div id="result-timeline" ref={hostRef}>
+      <div className="result-timeline">
+        <div className="result-timeline-head">
+          <h2 className="result-timeline-title">
+            <History size={14} aria-hidden="true" />
+            Scenario result timeline
+          </h2>
+          <div className="result-timeline-controls">
+            <label className="sr-only" htmlFor="result-event-picker">Event or year context</label>
+            <select
+              id="result-event-picker"
+              value={mode}
+              onChange={(e) => setMode(e.target.value as "event" | "history")}
+            >
+              <option value="event">Sep–Oct 2024 event replay (25 Sep – 3 Oct)</option>
+              <option value="history">2015–2024 multiyear history (daily)</option>
+            </select>
+            <button type="button" className="text-action" onClick={onOpenHistory}>
+              Open interactive history
+              <ArrowUpRight size={13} aria-hidden="true" />
+            </button>
+            <button type="button" className="icon-button" onClick={onClose} aria-label="Hide scenario result timeline">
+              <X size={16} aria-hidden="true" />
+            </button>
+            </div>
         </div>
-      </div>
       {mode === "event" ? (
         <>
           <p className="result-timeline-note">
@@ -158,7 +177,7 @@ export default function ResultTimeline({
           <div className="result-columns">
             <div>
               <h3 className="result-subhead"><CloudRain size={13} aria-hidden="true" /> Event window, day by day</h3>
-              <ul className="result-entries">
+              <ul className="result-entries" role="list">
                 {eventEntries.map((entry) => (
                   <Entry key={entry.id} entry={entry} />
                 ))}
@@ -172,7 +191,7 @@ export default function ResultTimeline({
                   runs ~2&nbsp;s after the review area settles, or place a proposal from a tool.
                 </p>
               ) : (
-                <ul className="result-entries">
+                <ul className="result-entries" role="list">
                   {runEntries.map((entry) => (
                     <Entry key={entry.id} entry={entry} />
                   ))}
@@ -193,8 +212,8 @@ export default function ResultTimeline({
           ) : (
             <>
               <div className="result-history-controls">
-                <label htmlFor="result-year-picker">Year</label>
-                <select id="result-year-picker" aria-label="History year" value={year} onChange={(e) => setYear(e.target.value)}>
+                <label htmlFor="result-year-picker">History year</label>
+                <select id="result-year-picker" value={year} onChange={(e) => setYear(e.target.value)}>
                   {years.map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
@@ -226,6 +245,7 @@ export default function ResultTimeline({
           )}
         </div>
       )}
-    </section>
+      </div>
+    </div>
   );
 }

@@ -22,70 +22,88 @@ const fail = (s) => {
   console.log("FAIL", s);
 };
 
+const hiddenState = () =>
+  page.evaluate(() => document.getElementById("result-timeline")?.getAttribute("hidden"));
+
 await page.goto(base);
 await page.getByRole("button", { name: "Explore", exact: true }).click();
 await page.locator(".maplibregl-canvas").waitFor();
 await page.waitForTimeout(3500);
 
-// 1. Toggle is keyboard-reachable and exposes aria-expanded/controls.
+// 1. Toggle starts collapsed: aria-expanded false and the panel carries hidden="until-found" (find-in-page stays possible).
 const toggle = page.getByRole("button", { name: "Result timeline", exact: true });
 await toggle.waitFor();
 const expanded = await toggle.getAttribute("aria-expanded");
-if (expanded === "false") ok("Result timeline toggle starts collapsed with aria-expanded=false");
-else fail(`Result timeline toggle aria-expanded=${expanded}`);
-await toggle.click();
-const region = page.getByRole("region", { name: "Scenario result timeline" });
-await expect(region).toBeVisible();
-const toggleExpanded = await toggle.getAttribute("aria-expanded");
-if (toggleExpanded === "true") ok("Result timeline toggle opens the same-view panel");
-else fail(`Result timeline toggle aria-expanded=${toggleExpanded}`);
+const hidden = await hiddenState();
+if (expanded === "false" && hidden === "until-found") ok("Result timeline starts collapsed (aria-expanded=false, hidden=until-found)");
+else fail(`Toggle aria-expanded=${expanded}, hidden=${hidden}`);
 
-// 2. The 9-day event window yields 27 day-bound records (rain, discharge, NRSC) plus any water-scenario input.
-const entries = region.locator(".result-entry");
-const count = await entries.count();
+// 2. Reveal via the toggle; hidden attribute is removed and content renders.
+await toggle.click();
+const openState = await hiddenState();
+const toggleExpanded = await toggle.getAttribute("aria-expanded");
+if (openState === null && toggleExpanded === "true") ok("Result timeline reveals in the same view (hidden removed, aria-expanded=true)");
+else fail(`open: hidden=${openState}, aria-expanded=${toggleExpanded}`);
+const panel = page.locator("#result-timeline");
+
+// 3. The 9-day event window yields 27 day-bound records.
+const count = await panel.locator(".result-entry").count();
 if (count >= 27) ok(`Event window renders ${count} timestamped/gap entries`);
 else fail(`Expected at least 27 entries, got ${count}`);
 
-// 3. NRSC: available only on 1-2 Oct 2024; explicit gaps elsewhere; never zero.
-const gapEntries = await region.locator(".result-entry-gap").count();
+// 4. NRSC: available only on 1-2 Oct 2024; explicit gaps elsewhere; never zero.
+const gapEntries = await panel.locator(".result-entry-gap").count();
 if (gapEntries >= 7) ok(`NRSC gaps preserved (${gapEntries} gap entries, never interpolated)`);
 else fail(`Expected at least 7 gap entries, got ${gapEntries}`);
-for (const day of ["2024-09-25"]) {
-  const nrscGap = region.locator(".result-entry", { hasText: day }).last();
-  void nrscGap;
-}
 
-// 4. Event picker offers the event and the 2015-2024 multiyear history.
-await region.getByLabel("Event or year context").selectOption("history");
-await expect(region.getByLabel("History year")).toBeVisible();
-const yearOptions = await region.getByLabel("History year").locator("option").allTextContents();
+// 5. Persistent heading structure: h2 title, h3 subheads — no fake headings, no landmark noise.
+const title = panel.getByRole("heading", { level: 2, name: "Scenario result timeline" });
+await expect(title).toBeVisible();
+ok("Panel has a structured h2 heading (no region landmark)");
+
+// 6. Event picker offers the event and the 2015-2024 multiyear history; history mode shows explicit gaps.
+await panel.getByLabel("Event or year context").selectOption("history");
+await expect(panel.getByRole("combobox", { name: "History year" })).toBeVisible();
+const yearOptions = await panel.getByRole("combobox", { name: "History year" }).locator("option").allTextContents();
 if (yearOptions.length === 10) ok("Multiyear history picker offers 2015-2024");
 else fail(`History year picker options: ${yearOptions.join(",")}`);
-await region.getByLabel("History year").selectOption("2020");
+await panel.getByRole("combobox", { name: "History year" }).selectOption("2020");
 await page.waitForTimeout(600);
-const stats = await region.locator(".result-history-stats dd").allTextContents();
+const stats = await panel.locator(".result-history-stats dd").allTextContents();
 if (stats.every(Boolean) && stats.length === 4) ok(`2020 history summary renders with explicit gap counts (${stats.join(" | ")})`);
 else fail(`2020 history summary missing values: ${stats.join(" | ")}`);
-const body = await region.innerText();
-if (/never as zero/i.test(body) || /never zero/i.test(body) || /never as zero or interpolated/i.test(body)) ok("Gap wording is explicit in history mode");
+const historyBody = await panel.innerText();
+if (/never as zero or interpolated/i.test(historyBody)) ok("Gap wording is explicit in history mode");
 else fail("History mode does not state that gaps are never zero");
 
-// 5. Switching back to the event and opening interactive history navigates to the River history view.
-await region.getByLabel("Event or year context").selectOption("event");
-await page.waitForTimeout(300);
-await region.getByRole("button", { name: "Open interactive history" }).click();
+// 7. Switching back to the event and opening interactive history navigates to the River history view.
+await panel.getByLabel("Event or year context").selectOption("event");
+await panel.getByRole("button", { name: "Open interactive history" }).click();
 await expect(page.getByRole("button", { name: "Explore the OSM map" })).toBeVisible();
 ok("Open interactive history switches to the 2015-2024 history view from the same flow");
 
-// 6. 360px layout has no horizontal overflow (the timeline stacks, not scrolls sideways).
+// 8. The panel state lives in the App; switching tabs and back preserves it. Close, then
+// simulate find-in-page revealing the panel (beforematch) — the toggle must re-sync to expanded.
+await page.getByRole("button", { name: "Explore", exact: true }).click();
+await page.locator(".maplibregl-canvas").waitFor();
+await page.waitForTimeout(1200);
+await expect(toggle).toHaveAttribute("aria-expanded", "true"); // persisted across the tab switch
+await page.getByRole("button", { name: "Hide scenario result timeline" }).click();
+await expect(toggle).toHaveAttribute("aria-expanded", "false");
+await page.evaluate(() => {
+  const el = document.getElementById("result-timeline");
+  el?.dispatchEvent(new Event("beforematch"));
+});
+await expect(toggle).toHaveAttribute("aria-expanded", "true");
+ok("beforematch re-syncs the toggle to expanded (find-in-page reveals the panel)");
+
+// 9. 360px layout: panel reveals without horizontal overflow.
 await page.setViewportSize({ width: 360, height: 800 });
 await page.goto(base);
 await page.getByRole("button", { name: "Explore", exact: true }).click();
 await page.locator(".maplibregl-canvas").waitFor();
 await page.waitForTimeout(2500);
 await page.getByRole("button", { name: "Result timeline", exact: true }).click();
-const mobileRegion = page.getByRole("region", { name: "Scenario result timeline" });
-await expect(mobileRegion).toBeVisible();
 const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
 if (scrollWidth === 360) ok("360px layout has no horizontal overflow");
 else fail(`360px layout overflows to ${scrollWidth}px`);

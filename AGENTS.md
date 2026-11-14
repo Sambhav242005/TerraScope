@@ -10,6 +10,7 @@ The active UI is the TerraScope historical-data and resource-review prototype. I
 
 ## Rules
 
+- Frontend HTML/CSS/browser-API work uses the modern-web-guidance skill (search + retrieve, then cross-check the implementation) before concluding; prefer its guides (e.g. accordion/disclosure, `hidden="until-found"`, native elements, accessibility) over ad-hoc patterns. Source: https://github.com/GoogleChrome/modern-web-guidance-src. Cite applied guide IDs in delivery notes when they shaped the code.
 - Design from the final product and end-to-end user job, not only the latest requested widget. Proactively research primary sources and discover missing prerequisites; do not wait for the user to enumerate features or data sources.
 - Read docs/PRODUCT_AUTONOMY.md and docs/AGENT_HARNESS.md. Scope is R01–R18. Default product behavior after region/objective selection is automatic supported data discovery/refresh, candidate placement, scenario evaluation and meaningful findings within configured limits.
 - Distinguish missing data from missing connectors, model capabilities and UX. Minimize routine manual work; document genuine access/configuration/scientific constraints. Do not imply an LLM can generate validated new physics or inaccessible surveys.

@@ -2948,7 +2948,7 @@ details.storage-run summary {
 
 .result-timeline { display: grid; gap: 10px; padding: 12px 24px 16px; background: #f7f9f5; border-top: 1px solid #e3e8df; font-size: 12px; }
 .result-timeline-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.result-timeline-title { display: inline-flex; align-items: center; gap: 7px; font-weight: 650; color: #26381f; font-size: 13px; }
+.result-timeline-title { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-weight: 650; color: #26381f; font-size: 13px; }
 .result-timeline-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .result-timeline-controls select, .result-history-controls select { min-height: 36px; border: 1px solid #c9d6ce; border-radius: 8px; background: #ffffff; padding: 4px 8px; color: #26381f; }
 .result-timeline-note { margin: 0; color: #5c6f60; line-height: 1.5; }

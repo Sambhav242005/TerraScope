@@ -2126,7 +2126,6 @@ export default function App() {
           <button
             className="secondary table-button"
             aria-expanded={showResults}
-            aria-controls="result-timeline"
             onClick={() => setShowResults((v) => !v)}
           >
             Result timeline
@@ -2200,7 +2199,7 @@ export default function App() {
           </div>
         </div>
       </section>
-      {showResults && tab !== "River history" && tab !== "3D explorer" && (
+      {tab !== "River history" && tab !== "3D explorer" && (
         <ResultTimeline
           days={days}
           dailyRain={dailyRain}
@@ -2211,6 +2210,8 @@ export default function App() {
           interventions={saved.interventions ?? []}
           onOpenHistory={() => setTab("River history")}
           onClose={() => setShowResults(false)}
+          open={showResults}
+          onOpen={() => setShowResults(true)}
         />
       )}
       {notice && (
