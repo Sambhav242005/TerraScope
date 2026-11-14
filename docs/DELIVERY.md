@@ -1,6 +1,6 @@
 # Delivery record — TerraScope prototype
 
-> Current status (5 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R01-R18 remain active.
+> Current status (14 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R10 was delivered on 14 November 2026; the other requirements R01-R18 remain active.
 
 
 Date: 4 November 2026. Status: functional local software prototype; broader scientific/competition release gates remain open.
@@ -46,6 +46,17 @@ Final production check: the thirteen browser checks also passed against the buil
 ## Visual history revision — 4 November 2026
 
 New default River history passes nine browser checks in tests/history-check.mjs: ten-year data/120 tiles, synchronized flow rise, leap years, peak selection, replay/pause, full export, circle removal, 360px layout and no unhandled errors. Existing thirteen workflow checks also pass with explicit Explore navigation. Production build passes. Evidence: artifacts/history-report.json; artifacts/history-desktop.png; artifacts/history-mobile.png; artifacts/history-video. No physical-phone or inundation validation claim. The requested actual mapped flood-rise/spread visualization is still outstanding.
+
+## Scenario result timeline - 14 November 2026 (R10)
+
+The Explore view now hosts a timestamped scenario result timeline, reachable from the replay control row ("Result timeline" button, `aria-expanded`/`aria-controls`). It is part of the same view — no tab switch.
+
+- The event picker switches the panel between the Sep–Oct 2024 replay window (25 Sep–3 Oct, the only hourly-granularity event) and a 2015–2024 multiyear readout with its own year picker: per-year days-with-discharge, explicit discharge gaps, explicit rainfall gaps and the year's peak discharge day.
+- The event ledger shows one date-bound entry per day for ERA5 rainfall (mm, IST day, sample cell 26.5°N 84.25°E), GloFAS discharge (m³/s, UTC day, model cell 25.775°N 85.125°E — not a gauge or issue-time forecast) and NRSC coverage (available only on 1–2 Oct 2024; explicit "no observed snapshot" gaps on every other day; nothing interpolated).
+- A runs-and-actions column lists timestamped entries: the automatic candidate-storage screening run (startedAt, status, candidate count, config hash, water-evidence retrieval time) and every placed proposal (createdAt, kind, coordinates, status).
+- Missing data is always an explicit gap — never zero, never interpolated. 11 headless browser checks pass (toggle behaviour, 27 day-bound entries, NRSC gap preservation, history picker with 2015–2024, 2020 gap counts, 360px no horizontal overflow, no console/page errors). 13 new unit tests (determinism, gap semantics, sorting, summarizeYear); 111/111 suite passes. Evidence: tests/result-timeline-check.mjs, tests/result-timeline.test.js, artifacts/result-timeline-report.json, artifacts/result-timeline-desktop.png, artifacts/result-timeline-360.png.
+- Limits: multiyear mode is aggregate read-only stats with explicit gaps — interactive playback/export stay in the River history view (linked from the same flow via "Open interactive history"). Only the Sep–Oct 2024 window carries hourly rainfall, so "event" mode is the only replay-backed context. Headless-only; no physical-phone performance test. Not a flood forecast, extent or validated hydrology; NRSC remains display-evidence only.
+
 
 ## Replay and terrain water scenario - 14 November 2026
 

@@ -32,9 +32,11 @@ import {
   Trees,
   Sparkles,
   HelpCircle,
+  History,
 } from "lucide-react";
 import MapView from "./flood/MapView";
 import RiverHistory from "./flood/RiverHistory";
+import ResultTimeline from "./flood/ResultTimeline";
 import WorldMap from "./flood/WorldMap";
 import { CandidateProfileChart } from "./flood/storage/CandidateProfileChart";
 import {
@@ -268,6 +270,7 @@ export default function App() {
     [selected, setSelected] = useState<string | null>(null),
     [sources, setSources] = useState(false),
     [showTable, setShowTable] = useState(false),
+    [showResults, setShowResults] = useState(false),
     [showGuide, setShowGuide] = useState(false),
     [showAssets, setShowAssets] = useState(true),
     [terrain, setTerrain] = useState(true),
@@ -2122,6 +2125,15 @@ export default function App() {
           <span className="day-count">Day {day + 1} / 9</span>
           <button
             className="secondary table-button"
+            aria-expanded={showResults}
+            aria-controls="result-timeline"
+            onClick={() => setShowResults((v) => !v)}
+          >
+            Result timeline
+            <History size={14} aria-hidden="true" />
+          </button>
+          <button
+            className="secondary table-button"
             onClick={() => setShowTable(true)}
           >
             Inspect data
@@ -2188,6 +2200,19 @@ export default function App() {
           </div>
         </div>
       </section>
+      {showResults && tab !== "River history" && tab !== "3D explorer" && (
+        <ResultTimeline
+          days={days}
+          dailyRain={dailyRain}
+          discharge={flow?.daily.river_discharge ?? []}
+          waterOn={waterOn}
+          waterLevel={waterLevel}
+          storageRun={storageRun}
+          interventions={saved.interventions ?? []}
+          onOpenHistory={() => setTab("River history")}
+          onClose={() => setShowResults(false)}
+        />
+      )}
       {notice && (
         <div className="toast" role="status">
           {notice}

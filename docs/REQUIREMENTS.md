@@ -1,9 +1,9 @@
 # Active user requirements — single-view environmental planning
 
-> Current status (5 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R01-R18 remain active.
+> Current status (14 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R10 was delivered on 14 November 2026; the other requirements remain active.
 
 
-Updated 4 November 2026. This is the scope register, not evidence of implementation. Latest user instructions override conflicting historical sections in other documents. TODO.md remains the execution backlog. Do not silently narrow this product to flood playback or review forms.
+Updated 4 November 2026 (R10 row updated 14 November 2026). This is the scope register, not evidence of implementation. Latest user instructions override conflicting historical sections in other documents. TODO.md remains the execution backlog. Do not silently narrow this product to flood playback or review forms.
 
 ## Intended experience
 
@@ -26,7 +26,7 @@ Example: “Find candidate places to store storm water upstream of this settleme
 | R07 | Solar/wind environmental-effects research and supported simulations | Verified evidence matrix and scale-specific energy/wake/land-surface models; explicit unsupported effects | Brief preserved; research/modeling pending |
 | R08 | El Niño / La Niña (ENSO) and global-event context | Dated source/index/forecast issue-time, location/season relevance, cited explanation; no fixed rainfall multiplier | User confirmed ENSO; not connected |
 | R09 | Forest loss/restoration, land-cover, drought/fire and environmental consequences | Each process has its own input/model/output contract and validation; unsupported processes shown as unavailable | Scope retained; not implemented |
-| R10 | Multiyear history plus event-scale playback in the same view | Year/event picker and timestamped result timeline, gaps preserved | 2015–2024 daily histories present; the Explore replay drives the shared map marker and date-matched observed snapshots. A timestamped scenario-result timeline is still pending |
+| R10 | Multiyear history plus event-scale playback in the same view | Year/event picker and timestamped result timeline, gaps preserved | Delivered 14 November 2026: the Explore view hosts a Result timeline with an event picker (Sep–Oct 2024 replay window; 2015–2024 multiyear readout with year picker, explicit gap counts and peak day), a timestamped ledger of rainfall/discharge/NRSC per day plus screening runs and placed proposals, and gaps preserved as explicit missing records (never zero/interpolated). Interactive multiyear playback/export remains in the River history view (linked from the same flow); no physical-phone test. See docs/DELIVERY.md |
 | R11 | Real geography, surveys and land records | Inspectable provenance, data coverage, terrain/channel survey distinction from parcels; no fabricated heights or ownership | Partial OSM/terrain only; surveys/parcels missing |
 | R12 | AI-generated counter-plans and comparison | Plans cite data/run IDs, expose tradeoffs and unknowns, link to proposed placements; no separate review workflow required | No local AI planning integrated |
 | R13 | Understandable dimensional visual feedback | Actual geometry and modeled water surfaces/depth colors; selectable evidence; physical-phone performance recording | Partial: grouped 3D solar/turbine geometry, observed NRSC raster and the terrain water-level scenario are visible and labeled. Modeled water surfaces/depth from a calibrated solver are absent, and no physical-phone performance recording exists |
@@ -91,7 +91,7 @@ Sequencing is not cancellation. Every requirement above remains visible until de
 
 ## Placement review correction ? 5 November 2026
 
-R03/R06/R11/R14/R15/R16: Automatic source-linked footprint checks now screen bounded OSM channels/roads/water/buildings and dated NRSC display-map colors; unknown/missing coverage stays unknown. This is partial siting evidence, not certified suitability or local AI. Matched-rainfall sensitivity comparisons explicitly exclude pins. Evidence and remaining P1?P3 scientific dependencies: docs/PLACEMENT_VALIDATION.md. R01/R02/R04/R05/R07?R10/R12/R13/R17 remain incomplete; this delivery does not resolve navigation, climate models or the autonomous harness.
+R03/R06/R11/R14/R15/R16: Automatic source-linked footprint checks now screen bounded OSM channels/roads/water/buildings and dated NRSC display-map colors; unknown/missing coverage stays unknown. This is partial siting evidence, not certified suitability or local AI. Matched-rainfall sensitivity comparisons explicitly exclude pins. Evidence and remaining P1?P3 scientific dependencies: docs/PLACEMENT_VALIDATION.md. R01/R02/R04/R05/R07?R09/R12/R13/R17 remain incomplete; this delivery does not resolve navigation, climate models or the autonomous harness. R10 was delivered on 14 November 2026 (see above).
 
 
 ## Renewable 3D visuals ? 5 November 2026

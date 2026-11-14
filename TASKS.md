@@ -1,6 +1,6 @@
 # Current status
 
-> Current status (5 November 2026): [Latest delivery, verification and remaining gaps](docs/CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R01-R18 remain active.
+> Current status (14 November 2026): [Latest delivery, verification and remaining gaps](docs/CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R10 was delivered on 14 November 2026; the other requirements remain active.
 
 
 ## Automatic planning — latest product contract
