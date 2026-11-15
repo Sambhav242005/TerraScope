@@ -31,6 +31,7 @@ import {
   Wind,
   Trees,
   Sparkles,
+  MessagesSquare,
   GitBranch,
   HelpCircle,
   History,
@@ -40,6 +41,7 @@ import RiverHistory from "./flood/RiverHistory";
 import ResultTimeline from "./flood/ResultTimeline";
 import EnsoContext from "./flood/EnsoContext";
 import Findings from "./flood/Findings";
+import DecisionDesk from "./flood/DecisionDesk";
 import { loadBasins, subBasinAt, toFeatureCollection, type BasinBundle } from "./flood/hydrobasins";
 import { loadHistorySeries, type HistoryRow } from "./flood/historySeries";
 import {
@@ -334,6 +336,7 @@ export default function App() {
     [storagePhase, setStoragePhase] = useState(""),
     [showCandidates, setShowCandidates] = useState(true),
     [showWaterLayer, setShowWaterLayer] = useState(true),
+    [showDecisionDesk, setShowDecisionDesk] = useState(false),
     [showBasins, setShowBasins] = useState(false),
     [basins, setBasins] = useState<BasinBundle | null>(null),
     [selectedStorage, setSelectedStorage] = useState<string | null>(null);
@@ -1071,6 +1074,15 @@ export default function App() {
         >
           <Info size={17} />
           <span>Data & sources</span>
+        </button>
+        <button
+          className="source-top ask-map-btn"
+          aria-label="Ask the map — decision workspace"
+          aria-expanded={showDecisionDesk}
+          onClick={() => setShowDecisionDesk((v) => !v)}
+        >
+          <MessagesSquare size={16} />
+          <span>Ask the map</span>
         </button>
         <div className="casebar">
         <div>
@@ -2728,6 +2740,19 @@ export default function App() {
             <EnsoContext onClose={() => setShowEnso(false)} />
           </div>
         </div>
+      )}
+      {showDecisionDesk && (
+        <DecisionDesk
+          context={{
+            history: historyRows,
+            manifest,
+            ensoYear: 2024,
+            storageRun,
+            proposalCount: (saved.interventions ?? []).length,
+            replayDate: days[day],
+          }}
+          onClose={() => setShowDecisionDesk(false)}
+        />
       )}
     </div>
   );
