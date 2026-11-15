@@ -3,7 +3,16 @@ import assert from 'node:assert/strict';
 import { answerQuestion } from '../src/flood/ai/responder.ts';
 import { buildPreMonsoonAdvisory, buildDecisionBrief } from '../src/flood/ai/drafts.ts';
 import { runTool } from '../src/flood/ai/tools.ts';
-import { authHeaders } from '../src/flood/ai/llmAdapter.ts';
+import { authHeaders, chatCompletionsUrl } from '../src/flood/ai/llmAdapter.ts';
+
+test('chatCompletionsUrl does not double-append /v1 (the Groq screenshot failure)', () => {
+  assert.equal(chatCompletionsUrl('https://api.groq.com/openai/v1'), 'https://api.groq.com/openai/v1/chat/completions');
+  assert.equal(chatCompletionsUrl('https://api.groq.com/openai/v1/'), 'https://api.groq.com/openai/v1/chat/completions');
+  assert.equal(chatCompletionsUrl('https://api.groq.com/openai/v1/'), chatCompletionsUrl('https://api.groq.com/openai/v1'));
+  assert.equal(chatCompletionsUrl('http://127.0.0.1:11434'), 'http://127.0.0.1:11434/v1/chat/completions');
+  assert.equal(chatCompletionsUrl('http://localhost:8080/v1'), 'http://localhost:8080/v1/chat/completions');
+  assert.equal(chatCompletionsUrl('https://lmstudio.local/api/openai/v1'), 'https://lmstudio.local/api/openai/v1/chat/completions');
+});
 
 const historyRows = [
   { date: '2024-07-15', rain: 120.5, flow: 41000, discharge: 41000 },

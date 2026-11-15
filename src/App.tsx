@@ -2467,14 +2467,14 @@ export default function App() {
                     <div className="guide-card-icon water"><Droplets size={22} /></div>
                     <h3>Natural Storage Basins (Teal on Map)</h3>
                     <p>
-                      The shaded teal outlines show <strong>natural depressions (ground bowls)</strong> detected from satellite elevation data. During monsoons, these areas naturally trap and hold runoff, protecting downstream settlements.
+                      The shaded teal outlines show <strong>natural depressions (ground bowls)</strong> detected from open elevation tiles. During monsoons these areas hold runoff — how much is usable is <strong>unverified</strong>; nothing here is an engineering storage design.
                     </p>
                   </div>
                   <div className="guide-card">
                     <div className="guide-card-icon wave"><Waves size={22} /></div>
                     <h3>Simulating Water Levels</h3>
                     <p>
-                      Use the <strong>Water-Level Scenario slider</strong> (bottom right) to simulate water surfaces between 44 m and 64 m elevation. The map immediately highlights low-lying land that would be submerged.
+                      Use the <strong>Water-Level Scenario slider</strong> (bottom right) to paint every DEM cell below a flat surface (44–64 m elevation, illustrative only). It is a geometry mask, not a flood depth, extent or forecast.
                     </p>
                   </div>
                   <div className="guide-card">
@@ -2491,6 +2491,17 @@ export default function App() {
                       Propose water storage basins, solar arrays, wind turbines, or riparian vegetation buffers. TerraScope checks every placement against real mapped buildings, roads, and riverways to avoid collisions.
                     </p>
                   </div>
+                </div>
+                <div className="guide-glossary">
+                  <h4>Your journeys — what works, and how honestly</h4>
+                  <ul>
+                    <li><strong>“What did late September 2024 look like?”</strong> Replay the bottom timeline (Explore or River history). Day-by-day GloFAS modeled discharge and ERA5 rainfall; a marker shows the sample cell. NRSC observed maps are withheld from this public build (production rights not cleared) — extent is unknown, never dry.</li>
+                    <li><strong>“Where could water be stored naturally?”</strong> Explore → “Natural water-storage candidates” → the screen finds terrain depressions; click a row to inspect bowl size, spill rim and its DEM-derived sub-basin. It is geometry, not a validated reservoir design.</li>
+                    <li><strong>“What would flood here?”</strong> There is no flood-extent layer anywhere in this app. The water-level slider paints DEM cells below a flat surface (illustrative), and the replay shows modeled flow. No depth, boundary or timing claim is made or possible yet.</li>
+                    <li><strong>“Where do I plan things?”</strong> Field checks: place solar, turbines, storage or vegetation proposals — overlaps with mapped buildings, roads and water are flagged automatically. Unknowns stay unknown; nothing is certified.</li>
+                    <li><strong>“Who decides?”</strong> Ask the map: cited answers from the local record, or your own local/cloud model (key stays in your browser; Groq is labeled cloud). Drafts (advisory, decision brief) download as markdown for a human authorised officer. The app never sends, posts or authorises anything.</li>
+                    <li><strong>“How sure are we?”</strong> Data &amp; sources: every dataset with retrieval date, hash and verdicts. Of the 18 tracked requirements, 13 remain open — this is decision support, never an official warning.</li>
+                  </ul>
                 </div>
                 <div className="guide-glossary">
                   <h4>Key Metrics Explained Simply:</h4>

@@ -47,6 +47,13 @@ export function authHeaders(cfg: LocalModelConfig): Record<string, string> {
   return headers;
 }
 
+/** Resolve the chat-completions endpoint, honoring base URLs that already include /v1 (e.g. Groq: https://api.groq.com/openai/v1). */
+export function chatCompletionsUrl(baseUrl: string): string {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  if (/\/v1$/.test(trimmed)) return `${trimmed}/chat/completions`;
+  return `${trimmed}/v1/chat/completions`;
+}
+
 async function postJson(url: string, body: unknown, signal: AbortSignal, cfg: LocalModelConfig): Promise<Response> {
   return fetch(url, {
     method: "POST",
@@ -64,7 +71,7 @@ export async function probeLocalModel(cfg: LocalModelConfig, signal?: AbortSigna
   const t0 = Date.now();
   try {
     const r = await postJson(
-      `${cfg.baseUrl.replace(/\/+$/, "")}/v1/chat/completions`,
+      chatCompletionsUrl(cfg.baseUrl),
       { model: cfg.model, messages: [{ role: "user", content: "ping" }], max_tokens: 1, temperature: 0 },
       merged,
       cfg,
@@ -95,7 +102,7 @@ export async function askLocalModel(cfg: LocalModelConfig, question: string, ctx
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45000);
   const merged = signal ? anySignal([ctrl.signal, signal]) : ctrl.signal;
-  const base = `${cfg.baseUrl.replace(/\/+$/, "")}/v1/chat/completions`;
+  const base = chatCompletionsUrl(cfg.baseUrl);
 
   const messages: Array<Record<string, unknown>> = [
     { role: "system", content: SYSTEM_PROMPT },
