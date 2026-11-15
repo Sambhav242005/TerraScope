@@ -31,6 +31,7 @@ export const DEPENDENCIES: Dependency[] = [
   { dataset: "terrarium-dem", usedBy: ["Candidate storage screening", "DEM transect profiles", "Terrain water-level scenario"], loadBearing: true },
   { dataset: "osm-evidence", usedBy: ["Candidate storage screening (water)", "Placement checks (refetch)", "Selected-area coverage"], loadBearing: true },
   { dataset: "hydrobasins-as12-sonpur", usedBy: ["Natural water-storage candidates (sub-basin context)", "Sub-basins map layer"], loadBearing: false },
+  { dataset: "renewable-resource-gandak", usedBy: ["Research baseline (docs/research/renewable-resource-gandak.md); not yet consumed by the app"], loadBearing: false },
 ];
 
 export type ManifestEntry = {
@@ -43,6 +44,7 @@ export type ManifestEntry = {
   model?: string;
   license?: string;
   provider?: string;
+  timezone?: string;
   coverageStart?: string | null;
   coverageEnd?: string | null;
   schemaVersion?: number;
@@ -99,8 +101,8 @@ export function checkManifestEntry(entry: ManifestEntry, now: Date): OnboardingC
         ? `Coverage ${entry.coverageStart} to ${entry.coverageEnd}.`
         : `Coverage bounds out of order: ${entry.coverageStart} to ${entry.coverageEnd}.`,
     });
-  } else if (id === "assets" || id === "scene-geometry") {
-    checks.push({ dataset: id, check: "coverage", verdict: "n/a", detail: "Map snapshot; coverage is the bounded extract, not a time range." });
+  } else if (id === "assets" || id === "scene-geometry" || entry.timezone === "not applicable") {
+    checks.push({ dataset: id, check: "coverage", verdict: "n/a", detail: "Static spatial artifact; temporal coverage is recorded as not applicable, not as a time range." });
   } else {
     checks.push({ dataset: id, check: "coverage", verdict: "fail", detail: "No parseable coverage window recorded." });
   }

@@ -43,6 +43,7 @@ import EnsoContext from "./flood/EnsoContext";
 import Findings from "./flood/Findings";
 import DecisionDesk from "./flood/DecisionDesk";
 import { loadBasins, subBasinAt, toFeatureCollection, type BasinBundle } from "./flood/hydrobasins";
+import { computeCapacityRange, CAPACITY_RANGE_LABEL } from "./flood/storage/capacityRange";
 import { loadHistorySeries, type HistoryRow } from "./flood/historySeries";
 import {
   DEFAULT_BUDGET,
@@ -91,9 +92,14 @@ import {
 } from "./flood/storage/storageSearch";
 import {
   type Intervention,
+  type PlacementEdit,
   type PlacementTool,
+  buildMoveDraft,
+  buildPlacementEdit,
+  nudgeCoords,
   createIntervention,
   validateIntervention,
+  validatePlacementEdit,
   summarizeInterventions,
 } from "./flood/intervention";
 import { getEnsoContextForYear, getEnsoColor } from "./flood/enso";
@@ -160,6 +166,12 @@ const SOURCE_CARDS: Record<
       "Asia level-12 sub-basin outlines clipped to the context window, 15 arc-second topography-derived. Not surveyed; upstream areas are measured at sub-basin outlets, not at any candidate; no flow routing modeled. 71 sub-basins, DEM-derived, never engineering catchments.",
     license: "HydroSHEDS license · Lehner & Grill (2013)",
   },
+  "renewable-resource-gandak": {
+    title: "Open-Meteo ERA5 solar/wind baseline",
+    blurb:
+      "Daily GHI and 10 m / 100 m wind at the Gandak-corridor sample cell, 2015–2024 reanalysis (0.25°), not a site measurement. No yield, capacity factor, dust or soiling. Screening aid only; provenance pinned in the artifact and the manifest.",
+    license: "Open-Meteo / Copernicus · CC BY 4.0 data; non-commercial terms",
+  },
 };
 
 type Saved = {
@@ -170,6 +182,7 @@ type Saved = {
   scenario: Scenario;
   custom: Asset[];
   interventions?: Intervention[];
+  placementEdits?: PlacementEdit[];
   mapTarget?: MapTarget;
 };
 const initial: Saved = {
@@ -180,6 +193,7 @@ const initial: Saved = {
   scenario: { rainScale: 1, loss: 0.35, lag: 8 },
   custom: [],
   interventions: [],
+  placementEdits: [],
 };
 function load(): Saved {
   try {
@@ -220,6 +234,9 @@ function load(): Saved {
       ),
       interventions: Array.isArray(v.interventions)
         ? v.interventions.filter(validateIntervention)
+        : [],
+      placementEdits: Array.isArray(v.placementEdits)
+        ? v.placementEdits.filter(validatePlacementEdit)
         : [],
     };
   } catch {
@@ -797,9 +814,19 @@ export default function App() {
   const inspected =
     storageRun?.candidates.find((c) => c.id === selectedStorage) ?? null;
   const basinFC = useMemo(() => (basins ? toFeatureCollection(basins) : null), [basins]);
-  const basinForInspected = useMemo(
-    () => (inspected ? subBasinAt(basins, inspected.centroid[0], inspected.centroid[1]) : null),
-    [basins, inspected],
+  const basinForInspected = useMemo(() => (inspected ? subBasinAt(basins, inspected.centroid[0], inspected.centroid[1]) : null), [basins, inspected]);
+  const capacityRangeForInspected = useMemo(
+    () =>
+      inspected
+        ? computeCapacityRange({
+            spillElevationM: inspected.spillElevationM,
+            minimumElevationM: inspected.minimumElevationM,
+            geometricCapacityM3: inspected.geometricCapacityM3,
+            footprintAreaM2: inspected.footprintAreaM2,
+            maximumDepthToSpillM: inspected.maximumDepthToSpillM,
+          })
+        : null,
+    [inspected],
   );
   const interventionSummary = useMemo(
     () => summarizeInterventions(saved.interventions ?? []),
@@ -987,6 +1014,91 @@ export default function App() {
     update({ interventions: updated });
     setSelectedIntervention(null);
     setNotice("Undid last intervention placement.");
+  }
+
+  // Move a saved proposal to a new spot. The moved draft is re-admitted against
+  // the loaded evidence exactly like a fresh placement; only a passing check
+  // re-persists anything. The camera and the reviewed area are never forced to
+  // change for an ordinary edit. A blocked or failed drop never saves and the
+  // map marker snaps back to the as-saved position (MapView owns that snap).
+  function handleMoveIntervention(id: string, coords: { lat: number; lon: number }) {
+    const current = saved.interventions ?? [];
+    const item = current.find((i) => i.id === id);
+    if (!item) return;
+    let draft: Intervention;
+    try {
+      draft = buildMoveDraft(item, coords);
+    } catch {
+      setPlacementError(
+        "Move not applied: the dropped point is outside the supported coordinate limits (±85° latitude, ±180° longitude). Nothing was changed.",
+      );
+      return;
+    }
+    if (draft.lat === item.lat && draft.lon === item.lon) {
+      setNotice(`${item.name} is already at this position. Nothing was changed.`);
+      return;
+    }
+    const currentKey = placementAreaKey(saved.area);
+    const freshEvidence =
+      placementReview.state === "ready" && placementReview.loadedAreaKey === currentKey;
+    if (!freshEvidence) {
+      const block =
+        placementReview.state === "failed"
+          ? "Move not applied: area map checks failed. Retry the area checks, then move the proposal again. Nothing was changed."
+          : "Move not applied: area map checks are not ready for the reviewed area. Wait for them to load, then move the proposal again. Nothing was changed.";
+      setPlacementError(block);
+      setPlacementAttempt({
+        item: draft,
+        check: assessPlacement(draft, null, proposalItems).check,
+        block,
+        state: "blocked",
+        target: coords,
+        success: "",
+      });
+      return;
+    }
+    // proposalItems includes the moved item itself; checkScenePlacement skips
+    // self-overlap, so admission sees every other proposal but not this one.
+    const admission = assessPlacement(draft, placementReview.evidence, proposalItems);
+    if (!admission.block) {
+      const edit = buildPlacementEdit(item, draft, new Date().toISOString());
+      // Append against the latest saved state, not the render that started the check.
+      setSaved((s) => ({
+        ...s,
+        interventions: (s.interventions ?? []).map((i) => (i.id === id ? draft : i)),
+        placementEdits: [...(s.placementEdits ?? []), edit],
+      }));
+      setSelectedIntervention(id);
+      setPlacementAttempt(null);
+      setPlacementError("");
+      setNotice(
+        `Moved ${draft.name} to ${coords.lat.toFixed(4)}°N, ${coords.lon.toFixed(4)}°E. Admission re-checked against loaded map evidence and recorded in the edit audit; effects not calculated.`,
+      );
+      return;
+    }
+    const block = admission.needsAreaEvidence
+      ? "Move not applied: the dropped point is outside the loaded building/road/water coverage. Select this area (place search) and wait for its checks, then move the proposal again. Nothing was changed."
+      : admission.block;
+    setPlacementError(block);
+    setPlacementAttempt({
+      item: draft,
+      check: admission.check,
+      block,
+      state: "blocked",
+      target: coords,
+      success: "",
+    });
+  }
+
+  function handleNudgeIntervention(id: string, eastM: number, northM: number) {
+    const item = (saved.interventions ?? []).find((i) => i.id === id);
+    if (!item) return;
+    const next = nudgeCoords({ lat: item.lat, lon: item.lon }, eastM, northM);
+    if (!next) {
+      setNotice("Nudge not applied: the proposal is at the supported coordinate limit.");
+      return;
+    }
+    handleMoveIntervention(id, next);
   }
 
   function choose(id: string) {
@@ -1301,14 +1413,14 @@ export default function App() {
         const failed = attempt?.state === "failed";
         return <div className="placement-blocked" role="alert">
           <div className="placement-blocked-head">
-            <strong>{failed ? "Area check failed." : "This spot was not added."}</strong>
+            <strong>{failed ? "Area check failed." : attempt?.success === "" ? "Proposal was not moved." : "This spot was not added."}</strong>
             {kindLabels.length > 0 && <span className="placement-blocked-tags">
               {kindLabels.map(k => <span key={k} className="placement-tag">{k}</span>)}
             </span>}
             {attempt && <span className="placement-blocked-coord">{attempt.target.lat.toFixed(4)}, {attempt.target.lon.toFixed(4)}</span>}
           </div>
           {names.length > 0 && <p className="placement-blocked-names">{names.join(" · ")}</p>}
-          <p className="placement-blocked-note">{failed ? "Area evidence unavailable. Retry or choose another spot." : "Nothing was saved. Map check does not authorize a site."}</p>
+          <p className="placement-blocked-note">{failed ? "Area evidence unavailable. Retry or choose another spot." : attempt?.success === "" ? "The proposal stayed where it was saved. Map check does not authorize a site." : "Nothing was saved. Map check does not authorize a site."}</p>
           <div className="placement-blocked-actions">
             <details className="placement-blocked-details"><summary>Details</summary><p>{placementError}</p></details>
             {failed && <button onClick={retryPlacementAttempt}>Retry area checks</button>}
@@ -1364,6 +1476,7 @@ export default function App() {
               onSelectIntervention={setSelectedIntervention}
               activePlacementTool={activePlacementTool}
               onPlaceAt={handlePlaceAt}
+              onMoveIntervention={handleMoveIntervention}
               showInterventions={showInterventions}
               placementChecks={placementReview.checks}
               placementAttempt={placementAttempt}
@@ -1419,6 +1532,7 @@ export default function App() {
               onSelectIntervention={setSelectedIntervention}
               activePlacementTool={activePlacementTool}
               onPlaceAt={handlePlaceAt}
+              onMoveIntervention={handleMoveIntervention}
               showInterventions={showInterventions}
               placementChecks={placementReview.checks}
               placementAttempt={placementAttempt}
@@ -1659,6 +1773,14 @@ export default function App() {
                       Sub-basin lookup: outside the HydroBASINS context window (84.75–85.55E, 25.35–26.0N)
                     </small>
                   )}
+                  {capacityRangeForInspected?.ok && (
+                    <small className="candidate-catchment">
+                      {CAPACITY_RANGE_LABEL}: P10 {Math.round(capacityRangeForInspected.variants.uncorrelated.p10M3).toLocaleString("en-GB")} – P50 {Math.round(capacityRangeForInspected.variants.uncorrelated.p50M3).toLocaleString("en-GB")} – P90 {Math.round(capacityRangeForInspected.variants.uncorrelated.p90M3).toLocaleString("en-GB")} m³ (uncorrelated DEM error, σ 2.5 m assumed, illustrative only)
+                    </small>
+                  )}
+                  {capacityRangeForInspected && !capacityRangeForInspected.ok && (
+                    <small className="candidate-catchment">DEM-error range refused: {capacityRangeForInspected.reason}</small>
+                  )}
                   <dl className="storage-facts">
                     <div>
                       <dt>Geometric capacity to spill</dt>
@@ -1880,6 +2002,18 @@ export default function App() {
                 </div>
               )}
               <p className="intervention-note">{inspectedIntervention.notes}</p>
+              <div role="group" aria-label="Nudge proposal position">
+                <p className="intervention-note">Nudge proposal ~200 m (each nudge is re-checked like a move; effects not calculated; not a surveyed position):</p>
+                <button className="placement-btn" onClick={() => handleNudgeIntervention(inspectedIntervention.id, 0, 200)} aria-label="Nudge proposal about 200 metres north" title="Nudge about 200 m north">N</button>
+                <button className="placement-btn" onClick={() => handleNudgeIntervention(inspectedIntervention.id, 200, 0)} aria-label="Nudge proposal about 200 metres east" title="Nudge about 200 m east">E</button>
+                <button className="placement-btn" onClick={() => handleNudgeIntervention(inspectedIntervention.id, 0, -200)} aria-label="Nudge proposal about 200 metres south" title="Nudge about 200 m south">S</button>
+                <button className="placement-btn" onClick={() => handleNudgeIntervention(inspectedIntervention.id, -200, 0)} aria-label="Nudge proposal about 200 metres west" title="Nudge about 200 m west">W</button>
+              </div>
+              {(saved.placementEdits ?? []).filter((e) => e.interventionId === inspectedIntervention.id).length > 0 && (
+                <p className="intervention-note">
+                  {(saved.placementEdits ?? []).filter((e) => e.interventionId === inspectedIntervention.id).length} recorded move(s) in the workspace edit audit. The audit pairs the as-placed and as-moved geometry for each confirmed move; it is not a surveyed boundary and proposals are not calculation inputs.
+                </p>
+              )}
               <PlacementReview item={inspectedIntervention} check={placementReview.checks[inspectedIntervention.id] ?? null} evidence={placementReview.evidence} state={placementReview.state} retry={placementReview.retry}/>
               <button
                 className="delete-btn"

@@ -48,6 +48,11 @@ const catchmentText = await catchment.innerText().catch(() => "");
 if (/Sub-basin \d+/.test(catchmentText) && /upstream area/.test(catchmentText)) ok(`Candidate detail shows sub-basin context (${catchmentText.split("·")[0].trim()})`);
 else if (/outside the HydroBASINS/.test(catchmentText)) ok("Candidate detail reports the candidate as outside the HydroBASINS context window");
 else fail(`Candidate detail lacks the sub-basin line: "${catchmentText.slice(0, 120)}"`);
+
+// 2b. Candidate detail carries the illustrative DEM-error capacity range with its mandatory label.
+const rangeText = (await page.locator(".candidate-catchment").allInnerTexts()).join(" ");
+if (/illustrative range from DEM vertical error only; not a tolerance on available storage/.test(rangeText)) ok("Candidate detail shows the DEM-error capacity range with the mandatory label");
+else fail(`Capacity-range label missing in candidate detail: "${rangeText.slice(0, 160)}"`);
 await page.screenshot({ path: "artifacts/basins-desktop.png", fullPage: true });
 
 // 3. 360px layout: no horizontal overflow with the toggle visible.

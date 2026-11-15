@@ -160,6 +160,28 @@
     "uncertainty": "DEM-derived sub-basin delineation from HydroSHEDS core elevation/flow-direction data; not surveyed; not hydrologically validated. Sub-basins partially inside the window are clipped; areas (SUB_AREA, UP_AREA) are full-basin source values. In this plain reach level-12 basins are ~1.5-227 km2. Not an engineering catchment."
   },
   {
+    "id": "renewable-resource-gandak",
+    "url": "https://archive-api.open-meteo.com/v1/archive?latitude=26.5&longitude=84.25&start_date=2015-01-01&end_date=2024-12-31&daily=shortwave_radiation_sum,wind_speed_10m_mean,wind_speed_100m_mean&models=era5&timezone=Asia%2FKolkata&wind_speed_unit=ms",
+    "sha256": "af7875c8e76d13312b00f20f4e909e1a05a0dcd994d0ab51abfd8136304dc14c",
+    "retrieved": "2026-11-15T14:38:38+00:00",
+    "status": "downloaded",
+    "coverageStart": "2015-01-01",
+    "coverageEnd": "2024-12-31",
+    "provider": "Open-Meteo / Copernicus",
+    "model": "ERA5 reanalysis",
+    "resolution": "0.25 degree / daily",
+    "units": "GHI MJ/m2/day; wind speed m/s",
+    "timezone": "Asia/Kolkata (IST)",
+    "crs": "EPSG:4326",
+    "returnedCoordinates": [
+      84.25,
+      26.5
+    ],
+    "license": "CC BY 4.0 data; free API non-commercial terms",
+    "processing": "Daily values kept verbatim from the archive response; no regridding, gap filling, bias correction, or soiling/temperature model applied.",
+    "uncertainty": "Grid reanalysis at/near the Gandak corridor; not a site measurement. No soiling, dust, yield, capacity factor or NPV estimate is derived from this file. Screening aid only; not evidence of resource at any pin."
+  },
+  {
     "id": "scene-geometry",
     "url": "https://api.openstreetmap.org/api/0.6/map?bbox=85.14,25.68,85.19,25.73",
     "sha256": "fcc1a368ef5d679e199c60d76bb8893f820786431fc4db047afeb0a0da7c0d25",

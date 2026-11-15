@@ -70,6 +70,7 @@ export default function MapView({
   onSelectIntervention,
   activePlacementTool="select",
   onPlaceAt,
+  onMoveIntervention,
   showInterventions=true,
   placementChecks,
   placementAttempt=null,
@@ -107,6 +108,8 @@ export default function MapView({
   onSelectIntervention?: (id: string) => void;
   activePlacementTool?: PlacementTool;
   onPlaceAt?: (coords: { lat: number; lon: number }) => void;
+  /** Drag a saved proposal pin to a new spot; the drop is re-admitted before anything persists. */
+  onMoveIntervention?: (id: string, coords: { lat: number; lon: number }) => void;
   showInterventions?: boolean;
   placementChecks?: Record<string, PlacementCheck | null>;
   placementAttempt?: PlacementAttempt | null;
@@ -132,7 +135,7 @@ export default function MapView({
     storage,
     onSelectIntervention,
     activePlacementTool,
-    onPlaceAt, interventions, showInterventions, placementChecks,
+    onPlaceAt, onMoveIntervention, interventions, showInterventions, placementChecks,
   });
   latest.current = {
     onArea,
@@ -141,7 +144,7 @@ export default function MapView({
     storage,
     onSelectIntervention,
     activePlacementTool,
-    onPlaceAt, interventions, showInterventions, placementChecks,
+    onPlaceAt, onMoveIntervention, interventions, showInterventions, placementChecks,
   };
   useEffect(() => {
     if (!host.current) return;
@@ -317,14 +320,28 @@ export default function MapView({
       el.textContent = glyphs[item.kind] ?? "•";
       el.setAttribute("aria-label", `Inspect ${item.name}`);
       el.dataset.placementStatus = placementChecks?.[item.id]?.status ?? "unknown";
-      el.title = `${item.name} - ${placementChecks?.[item.id]?.headline ?? "Suitability unknown"}`;
+      el.title = `${item.name} - ${placementChecks?.[item.id]?.headline ?? "Suitability unknown"}${latest.current.onMoveIntervention ? " (drag to move; the move is re-checked before it persists)" : ""}`;
       el.onclick = (e) => {
         e.stopPropagation();
         latest.current.onSelectIntervention?.(item.id);
       };
-      return new maplibregl.Marker({ element: el })
+      // Custom elements keep keyboard behaviour application-owned; dragging is the
+      // pointer gesture and the inspector nudge buttons are the keyboard/touch path.
+      el.style.touchAction = "none";
+      const draggable = Boolean(latest.current.onMoveIntervention);
+      const marker = new maplibregl.Marker({ element: el, draggable })
         .setLngLat([item.lon, item.lat])
         .addTo(m);
+      if (draggable) {
+        marker.on("dragend", () => {
+          const dropped = marker.getLngLat();
+          // Snap back to the as-saved position first. If the move is admitted,
+          // the interventions prop changes and this marker is rebuilt at the drop.
+          marker.setLngLat([item.lon, item.lat]);
+          latest.current.onMoveIntervention?.(item.id, { lat: dropped.lat, lon: dropped.lng });
+        });
+      }
+      return marker;
     });
   }, [interventions, selectedIntervention, showInterventions, placementChecks]);
   useEffect(() => {
