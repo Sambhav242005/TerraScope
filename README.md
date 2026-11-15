@@ -43,7 +43,7 @@ Browser checks use installed Microsoft Edge and default to port 5173; set DEMO_U
 
 Historical snapshots and query hashes are bundled in public/data. OSM/terrain tiles require internet. Refresh bounded data explicitly with `python scripts/refresh-case.py`; review changed hashes and records before release. VITE_OSM_TILES can specify a compliant alternative raster tile service, but its attribution must also be updated in MapView.tsx. Never place secrets in browser environment variables. Public OSM tiles are not an offline/bulk download service. The free Open-Meteo API is for non-commercial use; review terms for other deployment uses.
 
-No external deployment or competition submission was performed. The existing game source is preserved under docs/archive/living-valley/source and its old save keys remain untouched.
+A public deploy is live at https://terrascope-floods.embarko.app (claimed permanent with the user's token on 15 November 2026, after the user's direction; NRSC snapshots are withheld from the public build for production-rights reasons). No competition submission or official warning was performed. The existing game source is preserved under docs/archive/living-valley/source and its old save keys remain untouched.
 
 ## Documentation
 

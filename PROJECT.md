@@ -11,7 +11,7 @@ The system proactively discovers/refreshes supported data, generates candidate p
 
 Build a single-view local-AI-assisted environmental planning simulator: research sources, find candidate water-storage areas, calculate heavy-rainfall/river impacts and water rise, place storage/solar/wind/vegetation interventions, compare supported effects and include ENSO context. OSM remains geographic context. [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md), R01–R14, is the confirmed scope register.
 
-This supersedes review-centric product descriptions below. Local AI, placement, spatial flood calculations and ENSO integration are not implemented. The attached renewable research scope remains active. Staged delivery must not silently cancel requirements.
+This supersedes review-centric product descriptions below. Local AI inference is not implemented (the Groq preset is a labelled cloud convenience; R02/R12 remain open). Placement tools are partially implemented; spatial flood calculations are not implemented. ENSO context is implemented (dated panels, no analysis input). The attached renewable research scope remains active. Staged delivery must not silently cancel requirements.
 
 
 ## Current direction

@@ -1,6 +1,6 @@
 # Current delivery status - 14 November 2026
 
-Repository: https://github.com/Sambhav242005/TerraScope . The user authorized the initial GitHub push on 5 November 2026; the repository history remains at that initial commit while the work below is uncommitted in the working tree.
+Repository: https://github.com/Sambhav242005/TerraScope . The user authorized the initial GitHub push on 5 November 2026 and ongoing delivery; commits are pushed continuously, and on 15 November 2026 the user authorized a public deploy (Embarko). Live at https://terrascope-floods.embarko.app (claimed permanent with the user's token). NRSC snapshots are withheld from the public build (production rights not cleared).
 
 ## Implemented and exercised
 
@@ -25,11 +25,11 @@ Repository: https://github.com/Sambhav242005/TerraScope . The user authorized th
 
 ## Verification and evidence
 
-Latest repository verification (15 November 2026): 184 unit tests pass (13 result-timeline, 9 ENSO-analog, 9 findings, 12 data-onboarding, 21 harness, 7 hydrobasins, 15 decision-desk-incl.-auth-header, plus pre-existing); the context browser check passes 23 checks; the result-timeline check passes 13 checks; the basins check passes 4/4 (toggle, candidate sub-basin line "Sub-basin 4120905050", 360px no overflow, no console errors); the new decision-desk check passes 8/8 (honest not-connected default, grounded peak answer with cited chip, advisory and brief downloads, 360px, no console errors); flood-check 13/13 with the harness wired into the screening path; TypeScript/production build passes with the existing large-bundle warning. A real browser run completed enqueue, start, verify for the storage screening (job harness-5055cb92-1, 909 tiles). Real-network walkthrough rehearsals and recordings exercise building/road/proposal rejection, grouped solar/single turbine, Patna search and selected-area OSM retrieval, without mocked responses. No real-phone performance claim.
+Latest repository verification (15 November 2026): 185 unit tests pass (13 result-timeline, 9 ENSO-analog, 9 findings, 12 data-onboarding, 21 harness, 7 hydrobasins, 16 decision-desk-incl.-auth-header, plus pre-existing); the context browser check passes 23 checks; the result-timeline check passes 13 checks; the basins check passes 4/4 (toggle, candidate sub-basin line "Sub-basin 4120905050", 360px no overflow, no console errors); the decision-desk check passes 8/8 (honest not-connected default, grounded peak answer with cited chip, advisory and brief downloads, 360px, no console errors); flood-check 13/13 with the harness wired into the screening path; TypeScript/production build passes with vendor chunks split. A real browser run completed enqueue, start, verify for the storage screening (job harness-5055cb92-1, 909 tiles). Real-network walkthrough rehearsals and recordings exercise building/road/proposal rejection, grouped solar/single turbine, Patna search and selected-area OSM retrieval, without mocked responses. No real-phone performance claim.
 
 Local evidence (ignored by Git): artifacts/compact-header-desktop.png, artifacts/compact-header-mobile.png, artifacts/tall-demo/recording-report.json and artifacts/tall-demo/terrascope-placement-search.mp4. These paths will not be present in a fresh clone; no video was published externally.
 
-Replay/water evidence (14 November 2026): artifacts/replay-ui-1-initial.png, artifacts/replay-ui-2-water.png, artifacts/replay-ui-3-nrsc.png, artifacts/replay-ui-4-1024.png, artifacts/replay-ui-5-360.png, artifacts/replay-ui-6-3d.png and artifacts/replay-simulation-gallery.html. Measured header 84px, timeline 158px, map summary 285x45px; 1024px and 360px scrollWidth equal viewport width; no page errors.
+Replay/water evidence (14 November 2026): artifacts/replay-ui-1-initial.png, artifacts/replay-ui-2-water.png, artifacts/replay-ui-3-nrsc.png, artifacts/replay-ui-4-1024.png, artifacts/replay-ui-5-360.png, artifacts/replay-ui-6-3d.png and artifacts/replay-simulation-gallery.html. Measured header cited as 84px in the 14 Nov record; the current source `.app-shell .topbar` height is 52px (14 Nov header consolidation) — corrected here 15 Nov 2026; timeline 158px, map summary 285x45px; 1024px and 360px scrollWidth equal viewport width; no page errors.
 
 ## Still incomplete
 
@@ -39,7 +39,7 @@ R01-R18 remain open except R08, R10, R15, R16 and R17 (delivered 14 November 202
 
 ## Hosting and AI discussion
 
-Embarko was discussed as a possible React/Vite host; no deployment was performed or authorized by that discussion. Its documentation describes external AI calls with user-supplied provider keys stored server-side; included inference credits were not established. Its own-model hosting capability was not established. The requested local-AI direction remains in force; cloud AI is an optional future decision, not an implemented replacement. Hosting alone adds no AI or scientific capabilities.
+Embarko is deployed (15 November 2026, user-authorized): https://terrascope-floods.embarko.app serves the current main, claimed permanent to the user's token (`~/.embarko/credentials`). An earlier proposal was discussed and is now superseded by that deploy; hosting adds no AI/scientific capability. The requested local-AI direction remains in force; Qwen on Groq is a labeled cloud convenience, not the local model (R02/R12 remain open). NRSC imagery is withheld from the public build (production rights not cleared).
 
 ## Continuation
 
