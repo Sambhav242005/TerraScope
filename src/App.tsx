@@ -1302,6 +1302,9 @@ export default function App() {
               storage={storageMapData}
               selectedStorage={selectedStorage}
               onSelectStorage={setSelectedStorage}
+              discharge={flow?.daily.river_discharge[day] ?? null}
+              dischargeMax={flowMax}
+              dateLabel={`${date(days[day])} 2024`}
               showCandidates={showCandidates}
               showWaterLayer={showWaterLayer}
               showBasins={showBasins}
