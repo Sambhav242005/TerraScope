@@ -1,4 +1,11 @@
 // Display-only historical provider maps. Never use these PNGs as depth or drainage inputs.
+//
+// NRSC snapshots are LICENSED for non-commercial attributed DEVELOPMENT use only;
+// production/hosting rights are not cleared (see public/data/nrsc/manifest.json).
+// Public release builds must therefore withhold the raster overlay. Set this flag
+// back to true only when production redistribution rights are cleared.
+export const NRSC_SNAPSHOTS_ENABLED = false;
+
 export const NRSC_BOUNDS = [85.05, 25.6, 85.3, 25.85] as const;
 export const NRSC_FLOOD_SNAPSHOTS = [
   { id: "2024-10-01-10", label: "1 Oct 2024 ? 10Hr (zone unverified)", image: "/data/nrsc/bihar-2024-10-01-10.png" },

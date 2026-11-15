@@ -3,7 +3,7 @@ import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 maplibregl.setWorkerUrl(workerUrl);
-import { NRSC_FLOOD_SNAPSHOTS, NRSC_BOUNDS, nrscImageCoordinates } from "./nrsc";
+import { NRSC_SNAPSHOTS_ENABLED, NRSC_FLOOD_SNAPSHOTS, NRSC_BOUNDS, nrscImageCoordinates } from "./nrsc";
 import { RenewableLayer } from "./renewableModels";
 import type { PlacementCheck, PlacementEvidence } from "./placementCheck";
 import type { PlacementAttempt } from "./placementAdmission";
@@ -469,7 +469,7 @@ export default function MapView({
     const m = map.current;
     if (!m) return;
     const apply = () => {
-      const snapshot = NRSC_FLOOD_SNAPSHOTS.find(s => s.id === nrscSnapshot);
+      const snapshot = NRSC_SNAPSHOTS_ENABLED ? NRSC_FLOOD_SNAPSHOTS.find(s => s.id === nrscSnapshot) : undefined;
       if (!snapshot) {
         if (m.getLayer("nrsc-flood")) m.setLayoutProperty("nrsc-flood", "visibility", "none");
         return;
@@ -488,7 +488,7 @@ export default function MapView({
   // Replay only shows an observed provider map on its own fixed date. It never
   // interpolates between snapshots or treats the image as depth.
   useEffect(() => {
-    if (!replayDate) return;
+    if (!replayDate || !NRSC_SNAPSHOTS_ENABLED) return;
     const match = NRSC_FLOOD_SNAPSHOTS.find(s => s.id.startsWith(replayDate));
     if (match) {
       autoNrsc.current = match.id;
@@ -700,19 +700,28 @@ export default function MapView({
         <button type="button" aria-pressed={!satellite} onClick={() => setSatellite(false)}>Street</button>
         <button type="button" aria-pressed={satellite} onClick={() => setSatellite(true)}>Satellite</button>
         {satellite && <small>Esri imagery mosaic ? dates vary; not event imagery</small>}
-        {nrscSnapshot && <small><a href="https://www.nrsc.gov.in" target="_blank" rel="noreferrer">Source: NRSC, ISRO/DOS</a> | historical inundation; not depth</small>}
+        {nrscSnapshot && NRSC_SNAPSHOTS_ENABLED && <small><a href="https://www.nrsc.gov.in" target="_blank" rel="noreferrer">Source: NRSC, ISRO/DOS</a> | historical inundation; not depth</small>}
         <details className="indian-evidence">
-          <summary>{nrscSnapshot ? `NRSC flood: ${nrscSnapshot.slice(0, 10)} (fixed date)` : "Indian evidence"}</summary>
-          <label>NRSC historical flood map
-            <select aria-label="NRSC historical flood map" value={nrscSnapshot} onChange={e => setNrscSnapshot(e.target.value)}>
-              <option value="">Hidden</option>
-              {NRSC_FLOOD_SNAPSHOTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
-          </label>
-          <small>Fixed observation date; it loads only on that replay day. Cyan: provider-mapped inundation. Unmarked/outside coverage: unknown. No depth or blockage evidence.</small>
-          {nrscSnapshot && <button type="button" onClick={() => map.current?.fitBounds([[NRSC_BOUNDS[0],NRSC_BOUNDS[1]],[NRSC_BOUNDS[2],NRSC_BOUNDS[3]]], { padding: 55, duration: 0 })}>View snapshot area</button>}
-          <a href="/data/nrsc/manifest.json" target="_blank" rel="noreferrer">Source, bounds, dates &amp; fingerprints</a>
-          <a href="https://www.nrsc.gov.in/nrscnew/termsConditions.php" target="_blank" rel="noreferrer">Source: NRSC, ISRO/DOS ? terms</a>
+          <summary>{NRSC_SNAPSHOTS_ENABLED ? (nrscSnapshot ? `NRSC flood: ${nrscSnapshot.slice(0, 10)} (fixed date)` : "Indian evidence") : "Indian evidence (withheld)"}</summary>
+          {NRSC_SNAPSHOTS_ENABLED ? (
+            <>
+              <label>NRSC historical flood map
+                <select aria-label="NRSC historical flood map" value={nrscSnapshot} onChange={e => setNrscSnapshot(e.target.value)}>
+                  <option value="">Hidden</option>
+                  {NRSC_FLOOD_SNAPSHOTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </label>
+              <small>Fixed observation date; it loads only on that replay day. Cyan: provider-mapped inundation. Unmarked/outside coverage: unknown. No depth or blockage evidence.</small>
+              {nrscSnapshot && <button type="button" onClick={() => map.current?.fitBounds([[NRSC_BOUNDS[0],NRSC_BOUNDS[1]],[NRSC_BOUNDS[2],NRSC_BOUNDS[3]]], { padding: 55, duration: 0 })}>View snapshot area</button>}
+              <a href="/data/nrsc/manifest.json" target="_blank" rel="noreferrer">Source, bounds, dates &amp; fingerprints</a>
+              <a href="https://www.nrsc.gov.in/nrscnew/termsConditions.php" target="_blank" rel="noreferrer">Source: NRSC, ISRO/DOS ? terms</a>
+            </>
+          ) : (
+            <>
+              <small>Observed NRSC/ISRO flood maps are withheld from this public build: production/hosting rights are not cleared (non-commercial development snapshots only, per the provider). Observed extents remain unavailable — not dry, not safe, simply not redistributable here.</small>
+              <a href="https://www.nrsc.gov.in/nrscnew/termsConditions.php" target="_blank" rel="noreferrer">Source: NRSC, ISRO/DOS ? terms</a>
+            </>
+          )}
         </details>
       </div>
       {error && (

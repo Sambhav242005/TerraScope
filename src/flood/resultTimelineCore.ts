@@ -1,7 +1,7 @@
 // Timestamped scenario-result timeline for the shared Explore view.
 // Deterministic: same inputs produce the same entries. Missing records are
 // explicit gaps — never zero, never interpolated.
-import { NRSC_FLOOD_SNAPSHOTS } from "./nrsc.ts";
+import { NRSC_SNAPSHOTS_ENABLED, NRSC_FLOOD_SNAPSHOTS } from "./nrsc.ts";
 import type { ScreeningRun } from "./storage/storageSearch";
 import type { Intervention } from "./intervention";
 
@@ -37,9 +37,9 @@ export type ResultTimelineInput = {
   waterLevel: number;
   storageRun: ScreeningRun | null;
   interventions: Intervention[];
+  /** Override for the build constant; tests only. Defaults to NRSC_SNAPSHOTS_ENABLED. */
+  nrscEnabled?: boolean;
 };
-
-const NRSC_DAYS = new Set(NRSC_FLOOD_SNAPSHOTS.map((s) => s.id.slice(0, 10)));
 
 const number = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? null : v;
@@ -48,6 +48,7 @@ const fmt = (v: number, digits: number, unit: string) =>
   `${v.toLocaleString("en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${unit}`;
 
 export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
+  const nrscEnabled = input.nrscEnabled ?? NRSC_SNAPSHOTS_ENABLED;
   const { days, dailyRain, discharge, waterOn, waterLevel, storageRun, interventions } = input;
   const entries: ResultEntry[] = [];
 
@@ -81,7 +82,11 @@ export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
       state: flow == null ? "gap" : "available",
     });
 
-    const snapshot = NRSC_FLOOD_SNAPSHOTS.find((s) => s.id.startsWith(day));
+    const snapshot = nrscEnabled
+      ? NRSC_FLOOD_SNAPSHOTS.find((s) => s.id.startsWith(day))
+      : undefined;
+    const DAYS_OBSERVED = ["2024-10-01", "2024-10-02"];
+    const withheld = !nrscEnabled && DAYS_OBSERVED.includes(day);
     entries.push(
       snapshot
         ? {
@@ -98,8 +103,10 @@ export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
             kind: "nrsc",
             day,
             time: null,
-            title: "No observed NRSC snapshot",
-            detail: `No NRSC observation for ${day}; only 1 and 2 Oct 2024 are published. Nothing is interpolated — unmarked pixels are unknown, not dry.`,
+            title: withheld ? "NRSC snapshot withheld" : "No observed NRSC snapshot",
+            detail: withheld
+              ? "An NRSC observation exists for this day in the project's development build, but the maps may not be redistributed on a public host (production rights not cleared). Extent here is unknown."
+              : `No NRSC observation for ${day}; only 1 and 2 Oct 2024 are published. Nothing is interpolated - unmarked pixels are unknown, not dry.`,
             state: "gap",
           },
     );

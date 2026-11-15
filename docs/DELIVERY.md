@@ -93,6 +93,14 @@ Candidate details now show the containing sub-basin (HYBAS_ID, upstream area at 
 
 Evidence: `tests/hydrobasins.test.js` (artifact integrity, unique ids, area ordering, point-in-polygon incl. holes, Sonpur lookup, outside-window refusal); production build passes. Honest limits: DEM-derived delineation, not surveyed; in this plain reach level-12 basins are ~1.5–227 km², so a "contributing catchment" per candidate is a coarse bound, not a validated contributing area; UP_AREA is measured at the sub-basin outlet, not at the candidate; no flow routing between basins; no water-level or travel-time model; R03's remaining gaps (bathymetry, outlets, soils, groundwater, land rights) are unchanged. This does not validate any storage capacity figure.
 
+## NRSC withheld from public builds - 15 November 2026
+
+The two NRSC/ISRO flood-inundation display maps bundled under `public/data/nrsc/` are licensed for non-commercial attributed DEVELOPMENT snapshots only; production/hosting rights are not cleared (see `public/data/nrsc/manifest.json` limits). Redistributing them on a public host was rejected.
+
+`src/flood/nrsc.ts` now exports `NRSC_SNAPSHOTS_ENABLED = false`. The app shows what is true instead of a missing/broken control: the Indian-evidence panel states the maps are withheld from this public build, the timeline shows "NRSC snapshot withheld" (state: gap) for 2024-10-01/02 instead of claiming an observed footprint, and the map never requests the rasters. `buildResultTimeline` accepts a test-only `nrscEnabled` override so both licensed and public paths are unit-tested (12 timeline tests updated/extended). Repo stays at 184/184.
+
+Note: local development can re-enable NRSC only by flipping the constant AFTER production rights are cleared. The `manifest.json` entries are metadata (ids, hashes, terms links) and remain — the imagery files themselves are excluded from the public deploy tar. On the deployed build, the onboarding registry will report the NRSC snapshot datasets as missing (files absent) — expected and disclosed, not suppressed.
+
 ## Ask the map — decision workspace scaffold (R02/R12 support) - 15 November 2026
 
 New topbar control "Ask the map" opens a docked right-side panel ("decision workspace", in the one persistent view — no new tab) for anyone steering the decision. It implements the *interface and plumbing* of a local-LLM decision assistant without claiming any model exists:

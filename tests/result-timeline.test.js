@@ -50,9 +50,15 @@ test('missing discharge becomes an explicit gap, never zero', () => {
   assert.match(gap.detail, /not zero/i);
 });
 
-test('NRSC entries are available only on the published dates and gaps elsewhere', () => {
-  const entries = buildResultTimeline(base());
-  const byDay = new Map(entries.filter((e) => e.kind === 'nrsc').map((e) => [e.day, e.state]));
+test('NRSC entries withhold raster days by default (public build) and expose them only when licensed/enabled', () => {
+  const pub = buildResultTimeline(base());
+  const withheld = pub.find((e) => e.kind === 'nrsc' && e.day === '2024-10-01');
+  assert.equal(withheld.state, 'gap');
+  assert.match(withheld.title, /withheld/i);
+  assert.match(withheld.detail, /production rights|not cleared/i);
+
+  const licensed = buildResultTimeline(base({ nrscEnabled: true }));
+  const byDay = new Map(licensed.filter((e) => e.kind === 'nrsc').map((e) => [e.day, e.state]));
   assert.equal(byDay.get('2024-10-01'), 'available');
   assert.equal(byDay.get('2024-10-02'), 'available');
   for (const day of DAYS) {
