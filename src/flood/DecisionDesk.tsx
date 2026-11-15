@@ -57,12 +57,25 @@ function loadConfig(): LocalModelConfig {
     const raw = window.localStorage.getItem(CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<LocalModelConfig>;
-      return { baseUrl: String(parsed.baseUrl ?? "http://127.0.0.1:11434"), model: String(parsed.model ?? "") };
+      return {
+        baseUrl: String(parsed.baseUrl ?? "http://127.0.0.1:11434"),
+        model: String(parsed.model ?? ""),
+        apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",
+      };
     }
   } catch {
     // corrupted config → defaults
   }
-  return { baseUrl: "http://127.0.0.1:11434", model: "" };
+  return { baseUrl: "http://127.0.0.1:11434", model: "", apiKey: "" };
+}
+
+function isLocalHost(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+  } catch {
+    return false;
+  }
 }
 
 function saveConfig(cfg: LocalModelConfig): void {
@@ -131,6 +144,7 @@ export default function DecisionDesk({
 
   const modelConfigured = config.model.trim().length > 0;
   const localActive = probe === "ok" && modelConfigured;
+  const cloudEndpoint = modelConfigured && !isLocalHost(config.baseUrl);
 
   const send = async (rawQuestion: string) => {
     const question = rawQuestion.trim();
@@ -200,10 +214,14 @@ export default function DecisionDesk({
   };
 
   const modeChip = useMemo(() => {
-    if (localActive) return { label: "Local model connected", tone: "live" as const };
-    if (config.model.trim()) return { label: "Local model configured — not connected", tone: "warn" as const };
+    if (localActive) {
+      return cloudEndpoint
+        ? { label: `Cloud endpoint (${new URL(config.baseUrl).hostname}) — not local inference; questions leave this machine`, tone: "warn" as const }
+        : { label: "Local model connected", tone: "live" as const };
+    }
+    if (modelConfigured) return { label: cloudEndpoint ? "Cloud endpoint configured — not connected (key/model needed)" : "Local model configured — not connected", tone: "warn" as const };
     return { label: "Local AI: not connected (deterministic evidence mode)", tone: "info" as const };
-  }, [localActive, config.model]);
+  }, [localActive, cloudEndpoint, modelConfigured, config.baseUrl]);
 
   return (
     <section className="decision-desk" role="dialog" aria-label="Ask the map — decision workspace">
@@ -247,7 +265,13 @@ export default function DecisionDesk({
               )}
               <div className="desk-msg-foot">
                 <span className="desk-mode">
-                  {msg.mode === "local-model" ? `local model · ${msg.model}` : msg.mode === "fallback" ? "fallback (model unavailable)" : "deterministic evidence"}
+                  {msg.mode === "local-model"
+                    ? msg.toolCalls && msg.toolCalls.length === 0
+                      ? `local model · ${msg.model} · no tools called — unverified`
+                      : `local model · ${msg.model} · tools: ${msg.toolCalls?.length ?? 0}`
+                    : msg.mode === "fallback"
+                      ? "fallback (model unavailable)"
+                      : "deterministic evidence"}
                 </span>
                 <button className="desk-copy" onClick={() => void copy(i, msg.text)} aria-label="Copy answer text">
                   {copied === String(i) ? <BadgeCheck size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
@@ -293,6 +317,9 @@ export default function DecisionDesk({
 
       <details className="desk-config">
         <summary>Local model (optional) — bring your own</summary>
+        <button type="button" className="desk-preset" onClick={() => { setConfig({ ...config, baseUrl: "https://api.groq.com/openai/v1", model: "qwen/qwen3.8-27b" }); setProbe("idle"); setProbeDetail(""); }}>
+          Groq preset: qwen/qwen3.8-27b
+        </button>
         <label>
           Base URL
           <input
@@ -309,8 +336,19 @@ export default function DecisionDesk({
             type="text"
             value={config.model}
             onChange={(e) => { setConfig({ ...config, model: e.target.value }); setProbe("idle"); }}
-            placeholder="e.g. qwen2.5:7b"
+            placeholder="e.g. qwen/qwen3.8-27b (Groq) or qwen2.5:7b (Ollama)"
             aria-label="Local model name"
+          />
+        </label>
+        <label>
+          API key (optional — stored only in this browser, never in the app)
+          <input
+            type="password"
+            value={config.apiKey ?? ""}
+            onChange={(e) => { setConfig({ ...config, apiKey: e.target.value }); setProbe("idle"); }}
+            placeholder="Only if your endpoint requires one (e.g. Groq)"
+            aria-label="API key for the model endpoint"
+            autoComplete="off"
           />
         </label>
         <button type="button" onClick={() => void checkConnection()} disabled={probe === "checking" || !modelConfigured}>
@@ -323,7 +361,7 @@ export default function DecisionDesk({
           </p>
         )}
         <p className="desk-config-note">
-          Any OpenAI-compatible local endpoint works (Ollama, llama.cpp server, LM Studio). The model gets the same workspace tools as the offline responder: it can call them, never invent numbers, and never send anything. Without a reachable model, answers use deterministic evidence.
+          Any OpenAI-compatible endpoint works (Ollama at 127.0.0.1:11434, llama.cpp server, LM Studio — or cloud such as Groq). The model gets the same workspace tools as the offline responder: it can call them, never invent numbers, and never send anything. If the base URL is not this machine’s localhost (e.g. Groq), your questions and workspace snippets are sent there and it is labelled cloud — not local AI. Keys are stored only in this browser’s localStorage; they are never committed to the repository. Without a reachable model, answers use deterministic evidence. Free-tier Groq can be over capacity or rate-limited; when the model fails, the answer falls back to deterministic evidence and says so.
         </p>
       </details>
 

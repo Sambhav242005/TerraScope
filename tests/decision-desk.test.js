@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { answerQuestion } from '../src/flood/ai/responder.ts';
 import { buildPreMonsoonAdvisory, buildDecisionBrief } from '../src/flood/ai/drafts.ts';
 import { runTool } from '../src/flood/ai/tools.ts';
+import { authHeaders } from '../src/flood/ai/llmAdapter.ts';
 
 const historyRows = [
   { date: '2024-07-15', rain: 120.5, flow: 41000, discharge: 41000 },
@@ -119,6 +120,12 @@ test('drafts degrade gracefully when the record is missing', () => {
   assert.match(advisory, /not available/);
   const brief = buildDecisionBrief(emptyCtx).markdown;
   assert.match(brief, /unavailable|unknown/i);
+});
+
+test('API key is sent as a Bearer header and trimmed; absent key sends no auth header', () => {
+  assert.deepEqual(authHeaders({ baseUrl: 'https://api.groq.com/openai/v1', model: 'qwen/qwen3.8-27b', apiKey: '  gsk_test  ' }).Authorization, 'Bearer gsk_test');
+  assert.equal(authHeaders({ baseUrl: 'http://127.0.0.1:11434', model: 'qwen2.5:7b' }).Authorization, undefined);
+  assert.equal(authHeaders({ baseUrl: 'http://127.0.0.1:11434', model: 'qwen2.5:7b', apiKey: '   ' }).Authorization, undefined);
 });
 
 test('every citation the responder emits has id and detail', () => {

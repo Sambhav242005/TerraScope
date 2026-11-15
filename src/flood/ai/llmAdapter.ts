@@ -11,7 +11,7 @@
 // deterministic responder and label the answer accordingly.
 import { runTool, TOOL_CATALOG, type DecisionContext } from "./tools.ts";
 
-export type LocalModelConfig = { baseUrl: string; model: string };
+export type LocalModelConfig = { baseUrl: string; model: string; apiKey?: string };
 
 export type LocalModelAnswer = {
   text: string;
@@ -31,6 +31,8 @@ export const SYSTEM_PROMPT = [
   "5. You never issue warnings, orders, evacuations or authorisations. You may describe what a human officer may consider; the officer decides.",
   "6. You are not a forecaster, not an engineer, not a land-title authority. Say so when the question crosses those lines.",
   "7. Respond in plain language a time-pressed senior officer can act on. No hedging filler; no salesmanship.",
+  "8. If no tool output is available for a claim, say so explicitly and answer: \"Not enough evidence loaded in this workspace to answer that.\" Never fill gaps from general knowledge.",
+  "9. A cloud-hosted model (e.g. via Groq) sees only this workspace's context and tools. You have no access to private systems, databases or live feeds beyond the tools given.",
 ].join("\n");
 
 const OPENAI_TOOLS = TOOL_CATALOG.map((t) => ({
@@ -38,10 +40,17 @@ const OPENAI_TOOLS = TOOL_CATALOG.map((t) => ({
   function: { name: t.name, description: t.description, parameters: t.parameters },
 }));
 
-async function postJson(url: string, body: unknown, signal: AbortSignal): Promise<Response> {
+export function authHeaders(cfg: LocalModelConfig): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const key = cfg.apiKey?.trim();
+  if (key) headers["Authorization"] = `Bearer ${key}`;
+  return headers;
+}
+
+async function postJson(url: string, body: unknown, signal: AbortSignal, cfg: LocalModelConfig): Promise<Response> {
   return fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(cfg),
     body: JSON.stringify(body),
     signal,
   });
@@ -58,6 +67,7 @@ export async function probeLocalModel(cfg: LocalModelConfig, signal?: AbortSigna
       `${cfg.baseUrl.replace(/\/+$/, "")}/v1/chat/completions`,
       { model: cfg.model, messages: [{ role: "user", content: "ping" }], max_tokens: 1, temperature: 0 },
       merged,
+      cfg,
     );
     if (!r.ok) {
       const body = await r.text().catch(() => "");
@@ -96,7 +106,7 @@ export async function askLocalModel(cfg: LocalModelConfig, question: string, ctx
   try {
     // Round 1 (possibly with tools) → optional Round 2 after tool outputs.
     for (let round = 0; round < 2; round += 1) {
-      const r = await postJson(base, { model: cfg.model, messages, tools: OPENAI_TOOLS, tool_choice: "auto", max_tokens: 700, temperature: 0.2 }, merged);
+      const r = await postJson(base, { model: cfg.model, messages, tools: OPENAI_TOOLS, tool_choice: "auto", max_tokens: 700, temperature: 0.2 }, merged, cfg);
       if (!r.ok) {
         const body = await r.text().catch(() => "");
         throw new Error(`endpoint answered ${r.status}${body ? `: ${body.slice(0, 200)}` : ""}`);
