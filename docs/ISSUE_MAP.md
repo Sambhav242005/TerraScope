@@ -1,3 +1,16 @@
+# Issue connection map — 15 November 2026 (addendum, same day)
+
+After publication of the 8-agent analysis, four bounded fix slices landed with the orchestrator verifying every one:
+
+- **#3 R03** — illustrative DEM-error capacity range delivered and browser-verified (label verbatim in candidate detail; 16 tests; availableStorageM3 remains null). R03 still open — constraints/outlets/bathymetry unchanged.
+- **#6 R06** — slice (a) landed: drag-to-move re-admission + append-only edit audit (11 tests; maplibre pin draggable; keyboard nudge verified end-to-end 0→1 audit); pointer-gesture acceptance remains unverified; R06 still open.
+- **#2 R02** — benchmark runner + fixture tests landed (44 tests; pre-registered gates); never measured a real model; R02 still open (no local model installed).
+- **#7 R07** — ERA5 solar/wind baseline delivered and registered (dataset + statistics library + manifest/registry/sources card; 21 tests); no simulation; R07 still open.
+
+Proving discipline changed: verification now runs 277/277 unit tests, TypeScript build clean, and all browser suites green (flood 13/13, decision-desk 8/8, basins 5/5, feature-map 14/14, result-timeline 13/13).
+
+---
+
 # Issue connection map — 15 November 2026
 
 **Method.** Eight isolated, read-only analyst agents (one package each) + an orchestrator assembly. Agents created no commits, touched no tracked files (only `artifacts/agents/*.md`, gitignored), ran no browsers, and were forbidden to invent measurements. The orchestrator then did every browser/unit check itself and assembled this graph.
