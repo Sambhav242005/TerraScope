@@ -38,7 +38,7 @@ Candidate terrain inspection (14 November 2026; partial R03/R13/R14): `candidate
 
 TODO.md preserves the full research gates: choose/review the final historical event; obtain surveys, gauges and independent labels; freeze an evaluation protocol; select/calibrate/validate a solver; test held-out events/non-events and official/simple baselines; obtain approved local guidance; add authenticated team evidence and an authorized AI provider; test a real phone; review terms and competition requirements before any authorized publication.
 
-Public deployment live (15 November 2026, user-authorized): https://terrascope-floods.embarko.app , claimed permanent with the user's token; NRSC imagery withheld from the public build (production rights not cleared). No entry submission, messages to field teams or public warnings were performed.
+Public deployment live (15 November 2026, user-authorized; redeployed 15 Nov 2026 after the fix slices, deploymentId cmwhzsqda06pr13bar90va12g, now serving main 61faf14): https://terrascope-floods.embarko.app , claimed permanent with the user's token; NRSC imagery withheld from the public build (production rights not cleared). No entry submission, messages to field teams or public warnings were performed.
 
 Final production check: the thirteen browser checks also passed against the built preview at port 4173, including the emitted MapLibre worker. Data/source button has an explicit accessible label when its text is hidden on narrow screens. The app is left open locally for review.
 
