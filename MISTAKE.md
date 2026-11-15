@@ -61,3 +61,7 @@ Unvalidated pins were called simulated retention and a static summary was brande
 
 
 Warning-only placement checks still drew panels through buildings. New proposals now reject known conflicts before insertion; conflicting saved models are hidden but retained for correction. A searched region must not relabel Sonpur historical data as local evidence.
+
+## Data & sources card mislabel - 15 November 2026
+
+Every manifest dataset card in the Data & sources modal was titled "OpenStreetMap resources" unless it was ERA5 or GloFAS - including HydroBASINS v1c, which was also printed with an Open-Meteo/CC-BY-4.0 licence line (its licence is HydroSHEDS; its provider is HydroSHEDS, not Open-Meteo). Cause: a three-way ternary whose catch-all branch defaulted to a plausible-sounding name and licence instead of failing closed. Corrected with an explicit per-dataset lookup; unknown ids now render a generic card that refuses to be relied on until documented in the registry. Lesson matches the existing rule: absence of evidence must never be relabeled as a known quantity. Future reviewers should grep ternaries that branch on dataset id.

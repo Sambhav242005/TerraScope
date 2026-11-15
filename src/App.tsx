@@ -112,6 +112,56 @@ type Tab =
   | "Compare"
   | "Field checks"
   | "Response plan";
+
+/** Per-dataset copy for the Data & sources cards. Unknown ids fail closed to a generic card rather than a wrong label. */
+const SOURCE_CARDS: Record<
+  string,
+  { title: string; blurb: string; license: string }
+> = {
+  rainfall: {
+    title: "ERA5 rainfall",
+    blurb:
+      "Hourly reanalysis at a sample grid cell near 26.5°N, 84.25°E; not catchment-average or gauge rainfall. Approximately 0.25° resolution.",
+    license: "Open-Meteo / Copernicus · CC BY 4.0 data",
+  },
+  "rain-history": {
+    title: "ERA5 rainfall",
+    blurb:
+      "Daily reanalysis totals over ten years at a sample grid cell near 26.5°N, 84.25°E; not catchment-average or gauge rainfall.",
+    license: "Open-Meteo / Copernicus · CC BY 4.0 data",
+  },
+  discharge: {
+    title: "GloFAS discharge",
+    blurb:
+      "Historical modeled discharge at returned grid cell 25.775°N, 85.125°E. River-cell assignment is not independently verified; not a gauge observation or an issue-time forecast.",
+    license: "Open-Meteo / Copernicus · CC BY 4.0 data",
+  },
+  "flow-history": {
+    title: "GloFAS discharge",
+    blurb:
+      "Daily modeled discharge over ten years at returned grid cell 25.775°N, 85.125°E. River-cell assignment is not independently verified; not a gauge observation or an issue-time forecast.",
+    license: "Open-Meteo / Copernicus · CC BY 4.0 data",
+  },
+  assets: {
+    title: "OpenStreetMap resources",
+    blurb:
+      "Mapped facility records, not a complete or field-verified inventory. Current mapping may differ from 2024. Bounded extract: 25.68–25.73°N, 85.14–85.19°E. Outside this area, inventory is unavailable. Way positions are mean vertices, not verified entrances.",
+    license: "ODbL · OpenStreetMap contributors",
+  },
+  "scene-geometry": {
+    title: "OpenStreetMap scene geometry",
+    blurb:
+      "Buildings, roads, woods and water inside the bounded extract, shaded with illustrative heights (6 m per building). Footprints are mean-geometry; heights are decorative; not for engineering, not structures or hazards.",
+    license: "ODbL · OpenStreetMap contributors",
+  },
+  "hydrobasins-as12-sonpur": {
+    title: "HydroBASINS v1c sub-basins",
+    blurb:
+      "Asia level-12 sub-basin outlines clipped to the context window, 15 arc-second topography-derived. Not surveyed; upstream areas are measured at sub-basin outlets, not at any candidate; no flow routing modeled. 71 sub-basins, DEM-derived, never engineering catchments.",
+    license: "HydroSHEDS license · Lehner & Grill (2013)",
+  },
+};
+
 type Saved = {
   version: 1;
   area: { lat: number; lon: number };
@@ -2540,21 +2590,9 @@ export default function App() {
                 <div className="source-cards">
                   {manifest.map((m) => (
                     <article key={m.id}>
-                      <h3>
-                        {m.id === "rainfall" || m.id === "rain-history"
-                          ? "ERA5 rainfall"
-                          : m.id === "discharge" || m.id === "flow-history"
-                            ? "GloFAS discharge"
-                            : "OpenStreetMap resources"}
-                      </h3>
+                      <h3>{SOURCE_CARDS[m.id]?.title ?? "Unknown dataset"}</h3>
                       <span className="review-badge">{m.status}</span>
-                      <p>
-                        {m.id === "rainfall" || m.id === "rain-history"
-                          ? "Hourly reanalysis at a sample grid cell near 26.5°N, 84.25°E; not catchment-average or gauge rainfall. Approximately 0.25° resolution."
-                          : m.id === "discharge" || m.id === "flow-history"
-                            ? "Historical modeled discharge at returned grid cell 25.775°N, 85.125°E. River-cell assignment is not independently verified; not a gauge observation or an issue-time forecast."
-                            : "Mapped facility records, not a complete or field-verified inventory. Current mapping may differ from 2024. Bounded extract: 25.68–25.73°N, 85.14–85.19°E. Outside this area, inventory is unavailable. Way positions are mean vertices, not verified entrances."}
-                      </p>
+                      <p>{SOURCE_CARDS[m.id]?.blurb ?? "Not yet documented here — see the fingerprint and registry tables below before relying on it."}</p>
                       <small>
                         {m.model}
                         <br />
@@ -2563,10 +2601,7 @@ export default function App() {
                         Time reference: {m.timezone}
                       </small>
                       <small>
-                        Retrieved {m.retrieved} ·{" "}
-                        {m.id === "assets"
-                          ? "ODbL · OSM contributors"
-                          : "Open-Meteo / Copernicus · CC BY 4.0 data"}
+                        Retrieved {m.retrieved} · {SOURCE_CARDS[m.id]?.license ?? "licence not recorded — do not redistribute"}
                       </small>
                       <a href={m.url} target="_blank" rel="noreferrer">
                         Original query
