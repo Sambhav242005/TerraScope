@@ -10,6 +10,7 @@ import type { PlacementAttempt } from "./placementAdmission";
 import { summarizeAttempt } from "./placementFeedback";
 import { type Asset } from "./model";
 import { type Intervention, type PlacementTool } from "./intervention";
+import type { BasinFeatureCollection } from "./hydrobasins";
 
 type FeatureCollectionShim = {
   type: "FeatureCollection";
@@ -62,6 +63,8 @@ export default function MapView({
   onSelectStorage,
   showCandidates=true,
   showWaterLayer=true,
+  showBasins=false,
+  basins=null,
   interventions,
   selectedIntervention=null,
   onSelectIntervention,
@@ -97,6 +100,8 @@ export default function MapView({
   onSelectStorage?: (id: string) => void;
   showCandidates?: boolean;
   showWaterLayer?: boolean;
+  showBasins?: boolean;
+  basins?: BasinFeatureCollection | null;
   interventions?: Intervention[];
   selectedIntervention?: string | null;
   onSelectIntervention?: (id: string) => void;
@@ -417,6 +422,35 @@ export default function MapView({
     else m.once("load", apply);
     return () => { m.off("load", apply) };
   }, [storage, selectedStorage]);
+  useEffect(()=>{
+    const m=map.current;if(!m)return;
+    if (basins && !m.getSource("sub-basins")) {
+      const apply = () => {
+        if (m.getSource("sub-basins")) return;
+        m.addSource("sub-basins", {
+          type: "geojson",
+          data: basins as unknown as never,
+          attribution: "HydroBASINS v1c (Lehner & Grill 2013), HydroSHEDS license",
+        });
+        m.addLayer({
+          id: "sub-basin-outline",
+          type: "line",
+          source: "sub-basins",
+          layout: { visibility: showBasins ? "visible" : "none" },
+          paint: { "line-color": "#6d5a9e", "line-width": 1.1, "line-dasharray": [3, 2], "line-opacity": 0.85 },
+        });
+      };
+      if (m.isStyleLoaded()) apply();
+      else m.once("load", apply);
+      return () => { m.off("load", apply) };
+    }
+    if (basins && m.getSource("sub-basins")) (m.getSource("sub-basins") as maplibregl.GeoJSONSource).setData(basins as unknown as never);
+  }, [basins]);
+  useEffect(()=>{
+    const m=map.current;if(!m)return;
+    const apply=()=>{if(m.getLayer('sub-basin-outline'))m.setLayoutProperty('sub-basin-outline','visibility',showBasins?'visible':'none');};
+    if(m.isStyleLoaded())apply();else m.once('load',apply);return()=>{m.off('load',apply)};
+  },[showBasins]);
   useEffect(()=>{
     const m=map.current;if(!m)return;
     const update=()=>{if(m.getLayer('storage-fill'))m.setLayoutProperty('storage-fill','visibility',showCandidates?'visible':'none');if(m.getLayer('storage-outline'))m.setLayoutProperty('storage-outline','visibility',showCandidates?'visible':'none');if(m.getLayer('storage-water'))m.setLayoutProperty('storage-water','visibility',showWaterLayer?'visible':'none');};

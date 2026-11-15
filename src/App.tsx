@@ -31,6 +31,7 @@ import {
   Wind,
   Trees,
   Sparkles,
+  GitBranch,
   HelpCircle,
   History,
 } from "lucide-react";
@@ -39,6 +40,7 @@ import RiverHistory from "./flood/RiverHistory";
 import ResultTimeline from "./flood/ResultTimeline";
 import EnsoContext from "./flood/EnsoContext";
 import Findings from "./flood/Findings";
+import { loadBasins, subBasinAt, toFeatureCollection, type BasinBundle } from "./flood/hydrobasins";
 import { loadHistorySeries, type HistoryRow } from "./flood/historySeries";
 import {
   DEFAULT_BUDGET,
@@ -332,6 +334,8 @@ export default function App() {
     [storagePhase, setStoragePhase] = useState(""),
     [showCandidates, setShowCandidates] = useState(true),
     [showWaterLayer, setShowWaterLayer] = useState(true),
+    [showBasins, setShowBasins] = useState(false),
+    [basins, setBasins] = useState<BasinBundle | null>(null),
     [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const storageAbort = useRef<AbortController | null>(null),
     lastStorageRun = useRef<{ hash: string; lat: number; lon: number } | null>(
@@ -617,6 +621,16 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
+    let live = true;
+    loadBasins().then(
+      (bundle) => live && setBasins(bundle),
+      () => live && setBasins(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
     if (!sources && !showTable && !showGuide && !showEnso) return;
     const old = document.activeElement as HTMLElement;
     const dialog = dialogRef.current;
@@ -729,6 +743,11 @@ export default function App() {
   );
   const inspected =
     storageRun?.candidates.find((c) => c.id === selectedStorage) ?? null;
+  const basinFC = useMemo(() => (basins ? toFeatureCollection(basins) : null), [basins]);
+  const basinForInspected = useMemo(
+    () => (inspected ? subBasinAt(basins, inspected.centroid[0], inspected.centroid[1]) : null),
+    [basins, inspected],
+  );
   const interventionSummary = useMemo(
     () => summarizeInterventions(saved.interventions ?? []),
     [saved.interventions],
@@ -1273,6 +1292,8 @@ export default function App() {
               onSelectStorage={setSelectedStorage}
               showCandidates={showCandidates}
               showWaterLayer={showWaterLayer}
+              showBasins={showBasins}
+              basins={basinFC}
               interventions={saved.interventions}
               selectedIntervention={selectedIntervention}
               onSelectIntervention={setSelectedIntervention}
@@ -1326,6 +1347,8 @@ export default function App() {
               onSelectStorage={setSelectedStorage}
               showCandidates={showCandidates}
               showWaterLayer={showWaterLayer}
+              showBasins={showBasins}
+              basins={basinFC}
               interventions={saved.interventions}
               selectedIntervention={selectedIntervention}
               onSelectIntervention={setSelectedIntervention}
@@ -1369,6 +1392,12 @@ export default function App() {
                   icon: Building2,
                   on: showAssets,
                   act: () => setShowAssets(!showAssets),
+                },
+                {
+                  name: "Sub-basins (HydroBASINS)",
+                  icon: GitBranch,
+                  on: showBasins,
+                  act: () => setShowBasins(!showBasins),
                 },
                 {
                   name: "Candidate storage",
@@ -1552,6 +1581,19 @@ export default function App() {
                     {inspected.centroid[0].toFixed(5)} · rounded terrain-grid
                     cells, not a surveyed outline
                   </small>
+                  {basinForInspected && (
+                    <small className="candidate-catchment">
+                      Sub-basin {basinForInspected.hybas_id} · upstream area at sub-basin outlet{" "}
+                      {basinForInspected.up_area_km2.toLocaleString("en-GB", { maximumFractionDigits: 0 })} km² ·{" "}
+                      this sub-basin {basinForInspected.sub_area_km2.toLocaleString("en-GB", { maximumFractionDigits: 0 })} km² ·{" "}
+                      HydroBASINS v1c (DEM-derived, not surveyed)
+                    </small>
+                  )}
+                  {basins && !basinForInspected && inspected && (
+                    <small className="candidate-catchment">
+                      Sub-basin lookup: outside the HydroBASINS context window (84.75–85.55E, 25.35–26.0N)
+                    </small>
+                  )}
                   <dl className="storage-facts">
                     <div>
                       <dt>Geometric capacity to spill</dt>

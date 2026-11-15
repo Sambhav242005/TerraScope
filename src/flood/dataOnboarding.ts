@@ -30,6 +30,7 @@ export const DEPENDENCIES: Dependency[] = [
   { dataset: "nrsc-snapshots", usedBy: ["Explore replay (date-matched overlay)", "Placement evidence (map-color overlap, dated)"], loadBearing: true },
   { dataset: "terrarium-dem", usedBy: ["Candidate storage screening", "DEM transect profiles", "Terrain water-level scenario"], loadBearing: true },
   { dataset: "osm-evidence", usedBy: ["Candidate storage screening (water)", "Placement checks (refetch)", "Selected-area coverage"], loadBearing: true },
+  { dataset: "hydrobasins-as12-sonpur", usedBy: ["Natural water-storage candidates (sub-basin context)", "Sub-basins map layer"], loadBearing: false },
 ];
 
 export type ManifestEntry = {

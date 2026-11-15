@@ -97,6 +97,12 @@ The observation date remains explicit. Since 14 November 2026, the Explore repla
 
 CartoDEM download still requires the documented login flow; no authenticated tile was acquired. SISDP capabilities partially arrived before timeout and advertised DRAIN_PHASE_II bounds away from Sonpur; this is not verified drainage coverage for the pilot. No blockage, bathymetry, culvert or available-storage evidence is inferred. Existing Mapzen/OSM/Esri inputs remain identified by their actual sources; they were not relabeled as Indian data.
 
+## Sub-basin delineation (HydroBASINS v1c) - 14 November 2026
+
+`public/data/hydrobasins-as12-sonpur.json` ships 71 sub-basins (Asia level 12, 15 arc-second derived) clipped to the context window 84.75-85.55 E, 25.35-26.0 N, simplified to ~0.0003 degrees preserving topology. Source: `hybas_as_lev12_v1c.zip` (80 MB, sha256 `05e98a001fc526cd5fcdbbc8144fe0aa3ce6712c35624f72e4728b219193fdb9`), retrieved 14 Nov 2026, HydroSHEDS license (free for scientific, educational and commercial use; Lehner & Grill 2013, doi:10.1002/hyp.9740). Areas are full-basin source values; in this plain reach level-12 basins run ~1.5-227 km2, and UP_AREA (up to ~769,818 km2 for the main-stem Ganga) is the upstream area at the sub-basin's outlet, never at a candidate.
+
+In the app: candidates show their sub-basin (HYBAS_ID, up/sub areas, main-stem distance) in the candidate detail panel; a dashed sub-basin outline layer toggles from Map layers. Lookup is point-in-polygon (ray casting); points outside the context window report no lookup. This is DEM-derived catchment topology, not a surveyed catchment, not a validated contributing-area estimate, not an engineering catchment. Water-level routing inside a sub-basin is not modeled; nothing here changes R03's open gaps (bathymetry, outlets, soils, groundwater).
+
 ## Replay map and terrain water scenario ? 14 November 2026
 
 Replay uses two already-connected series on the map. A labeled marker at the GloFAS sample cell (85.125 E, 25.775 N, provider elevation 52.0 m) shows that day's modeled discharge; its bar height is relative to the nine-day replayed window and is not a gauge reading, depth or extent. The NRSC snapshot follows the rule above: only its own date, no interpolation. Neither layer identifies a measured flood footprint or a safe/dry area.

@@ -3030,3 +3030,6 @@ button.enso-badge:focus-visible { outline: 3px solid #216890; outline-offset: 2p
 
 /* Durable harness status line (R17) */
 .harness-line { display: block; color: #496a59; border-left: 2px solid #6a9cc6; padding-left: 8px; margin-bottom: 4px; }
+
+/* HydroBASINS sub-basin layer (R03 supporting data) */
+.candidate-catchment { display: block; font-size: 10px; line-height: 1.55; color: #4c3a75; border-left: 2px solid #6d5a9e; padding-left: 8px; margin: 4px 0 8px; }

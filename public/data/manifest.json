@@ -138,6 +138,28 @@
     "processing": "Daily precipitation sums in mm retained unchanged from the Open-Meteo response; no regridding, gap filling or recalibration."
   },
   {
+    "id": "hydrobasins-as12-sonpur",
+    "url": "https://data.hydrosheds.org/file/hydrobasins/standard/hybas_as_lev12_v1c.zip",
+    "sha256": "05e98a001fc526cd5fcdbbc8144fe0aa3ce6712c35624f72e4728b219193fdb9",
+    "retrieved": "2026-11-14",
+    "status": "downloaded; clipped to context window and simplified",
+    "provider": "HydroSHEDS (Lehner & Grill 2013, Hydrological Processes 27(15):2171-2186, doi:10.1002/hyp.9740)",
+    "model": "HydroBASINS v1c Asia, level 12",
+    "resolution": "15 arc-seconds derived sub-basins",
+    "units": "km2",
+    "timezone": "not applicable",
+    "crs": "EPSG:4326",
+    "license": "HydroSHEDS license - free for scientific, educational and commercial use (see Technical Documentation)",
+    "bounds": [
+      84.75,
+      25.35,
+      85.55,
+      26.0
+    ],
+    "processing": "Asia level-12 shapefile (80 MB) streamed from hydrosheds.org; records outside the context bbox skipped by shape bbox test; polygons clipped to the context window with shapely intersection; simplified to ~0.0003 degrees preserving topology. 71 sub-basins kept.",
+    "uncertainty": "DEM-derived sub-basin delineation from HydroSHEDS core elevation/flow-direction data; not surveyed; not hydrologically validated. Sub-basins partially inside the window are clipped; areas (SUB_AREA, UP_AREA) are full-basin source values. In this plain reach level-12 basins are ~1.5-227 km2. Not an engineering catchment."
+  },
+  {
     "id": "scene-geometry",
     "url": "https://api.openstreetmap.org/api/0.6/map?bbox=85.14,25.68,85.19,25.73",
     "sha256": "fcc1a368ef5d679e199c60d76bb8893f820786431fc4db047afeb0a0da7c0d25",

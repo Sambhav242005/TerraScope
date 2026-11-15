@@ -85,6 +85,14 @@ The deterministic storage-screening tool now runs under a persisted local harnes
 
 Evidence: `tests/harness.test.js` (21 adversarial tests: idempotent enqueue, scope rejection, heartbeat/tile/wall-clock budgets, verifier rejection of bad outputs, supersession, stale recovery, corrupt caches, roundtrip, cancellation); suite 162/162; production build passes; flood-check 13/13. Honest limits: exactly one registered harness tool (no LLM workers — that is by design per docs/AGENT_HARNESS.md: deterministic jobs stay code); no background service — the harness executes in-session inside the browser tab; live network auto-retry between jobs is deliberately not wired (an exhausted attempt budget fails the job; the user re-triggers explicitly); recovery after a hard browser kill relies on `recoverStale` on next mount, not on a live daemon.
 
+## Sub-basin context (HydroBASINS v1c) - 14 November 2026
+
+The candidate-storage slice gained real catchment topology from HydroBASINS v1c Asia (level 12, 15 arc-second derived, retrieved 14 Nov 2026, HydroSHEDS license, doi:10.1002/hyp.9740). `public/data/hydrobasins-as12-sonpur.json` ships 71 sub-basins clipped to the context window 84.75–85.55E, 25.35–26.0N, simplified to ~0.0003°; the source zip's sha256 is recorded in the manifest. Provenance and caveats: docs/DATA.md.
+
+Candidate details now show the containing sub-basin (HYBAS_ID, upstream area at the sub-basin outlet, this sub-basin's area, main-stem distance) — e.g. "Sub-basin 412xxx… · upstream area at sub-basin outlet ~769,818 km² · this sub-basin N km² · HydroBASINS v1c (DEM-derived, not surveyed)". Points outside the context window report no lookup. A dashed sub-basin outline layer toggles from Map layers (off by default).
+
+Evidence: `tests/hydrobasins.test.js` (artifact integrity, unique ids, area ordering, point-in-polygon incl. holes, Sonpur lookup, outside-window refusal); production build passes. Honest limits: DEM-derived delineation, not surveyed; in this plain reach level-12 basins are ~1.5–227 km², so a "contributing catchment" per candidate is a coarse bound, not a validated contributing area; UP_AREA is measured at the sub-basin outlet, not at the candidate; no flow routing between basins; no water-level or travel-time model; R03's remaining gaps (bathymetry, outlets, soils, groundwater, land rights) are unchanged. This does not validate any storage capacity figure.
+
 ## Replay and terrain water scenario - 14 November 2026
 
 The Explore replay now changes the map, not only the rainfall/flow numbers. Advancing the replay day updates a labeled GloFAS sample-cell marker at 85.125 E, 25.775 N with the modeled discharge for that day; its small bar is relative to the replayed nine-day window, not depth or extent. On the two dates that have a provider snapshot (1 and 2 October 2024) the NRSC observed raster auto-loads and is removed on other days. Nothing is interpolated between archived dates.
