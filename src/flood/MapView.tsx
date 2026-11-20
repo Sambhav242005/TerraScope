@@ -246,11 +246,11 @@ export default function MapView({
       if (target.closest(".resource-pin") || target.closest(".intervention-pin")) {
         return;
       }
-      if (m.getLayer("area-evidence-point") && m.queryRenderedFeatures(e.point, {layers: ["area-evidence-point"]}).length) { evidenceCallback.current?.(); return; }
       if (latest.current.activePlacementTool && latest.current.activePlacementTool !== "select") {
         latest.current.onPlaceAt?.({ lat: e.lngLat.lat, lon: e.lngLat.lng });
         return;
       }
+      if (m.getLayer("area-evidence-point") && m.queryRenderedFeatures(e.point, {layers: ["area-evidence-point"]}).length) { evidenceCallback.current?.(); return; }
       const picked = renewableLayer.current?.pick(e.point);
       if (picked) { latest.current.onSelectIntervention?.(picked); return; }
       if (m.getLayer("storage-fill")) {
@@ -289,8 +289,9 @@ export default function MapView({
       if (source) source.setData(data);
       else { m.addSource("area-evidence", {type: "geojson", data}); m.addLayer({id: "area-evidence-point", type: "circle", source: "area-evidence", paint: {"circle-radius": 9, "circle-color": "#8769a6", "circle-stroke-width": 3, "circle-stroke-color": "#fffdf7"}}); }
     };
-    if (m.isStyleLoaded()) update(); else m.once("load", update);
-    return () => { m.off("load", update); };
+    if (m.getSource("area-evidence") || m.isStyleLoaded()) update();
+    else m.once("idle", update);
+    return () => { m.off("idle", update); };
   }, [areaEvidence]);
 
   useEffect(() => {
