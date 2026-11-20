@@ -1647,7 +1647,7 @@ export default function App() {
             </button>
           </div>
         </section>
-        <aside ref={contextPanel} className="side-panel" id="landscape-context" hidden={panel === null} aria-label="Map context panel" onKeyDown={e => { if (e.key === "Escape") closePanel(); }}>
+        <aside ref={contextPanel} className="side-panel" id="landscape-context" hidden={panel === null} tabIndex={0} aria-label="Map context panel" onKeyDown={e => { if (e.key === "Escape") closePanel(); }}>
           <button className="context-close" onClick={closePanel} aria-label="Close context panel"><X size={18} /></button>
           <div hidden={panel !== "River history"}>
             <RiverHistory onMap={closePanel} onSources={() => setSources(true)} onFrame={setHistoryFrame} active={panel === "River history"} />
@@ -1729,10 +1729,10 @@ export default function App() {
             )}
             {storageRun?.status === "succeeded" &&
               (inspected ? (
-                <div className="candidate-detail">
+                <section className="candidate-detail" tabIndex={0} aria-labelledby="candidate-detail-title">
                   <div className="section-title">
                     <Droplets size={17} />
-                    <h3>{inspected.label}</h3>
+                    <h3 id="candidate-detail-title">{inspected.label}</h3>
                     <button
                       onClick={() => setSelectedStorage(null)}
                       aria-label="Close candidate details"
@@ -1846,7 +1846,7 @@ export default function App() {
                     <Plus size={15} />
                     Adopt candidate as planned storage basin
                   </button>
-                </div>
+                </section>
               ) : (
                 <>
                   <div className="list-heading storage-heading">

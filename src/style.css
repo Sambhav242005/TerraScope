@@ -1441,12 +1441,15 @@ tbody tr:nth-child(odd) {
 }
 .storage-row {
   width: 100%;
+  flex-direction: column;
   text-align: left;
-  justify-content: space-between;
   align-items: flex-start;
   padding: 10px 8px;
   border-bottom: 1px solid #dfe8e7;
-  gap: 8px;
+  gap: 4px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .storage-row.active {
   background: #ffffff;
@@ -1468,14 +1471,13 @@ tbody tr:nth-child(odd) {
   color: #7d9490;
 }
 .storage-row em {
-  flex-shrink: 0;
+  max-width: 100%;
   font-style: normal;
-  font-size: 8px;
+  font-size: 10px;
   background: #d9ecee;
   color: #1d6f79;
   padding: 2px 5px;
   border-radius: 3px;
-  margin-top: 2px;
 }
 .storage-note {
   display: block;
@@ -1490,26 +1492,31 @@ tbody tr:nth-child(odd) {
   background: #fff;
   border: 1px solid #d5e4e7;
   border-radius: 5px;
+  max-height: 45vh;
+  max-height: 45dvh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  line-height: 1.5;
+  overflow-wrap: break-word;
 }
 .candidate-detail > small {
   display: block;
-  font-size: 9px;
-  color: #84a09b;
+  font-size: 11px;
+  color: #486662;
   line-height: 1.6;
 }
 .storage-facts {
   margin: 9px 0 0;
 }
 .storage-facts > div {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 7px 0;
   border-bottom: 1px dashed #dbe7e8;
   font-size: 10px;
 }
 .storage-facts dt {
-  flex: 1;
   color: #6b8783;
 }
 .storage-facts dd {
@@ -2514,15 +2521,6 @@ details.storage-run summary {
 .guide-dismiss-btn:hover {
   background: #1c4735;
 }
-.candidate-detail {
-  margin-top: 10px;
-  padding: 12px;
-  background: #fff;
-  border: 1px solid #d5e4e7;
-  border-radius: 5px;
-  max-height: 520px;
-  overflow-y: auto;
-}
 .adopt-candidate-btn {
   display: flex;
   align-items: center;
@@ -2542,15 +2540,6 @@ details.storage-run summary {
 .adopt-candidate-btn:hover {
   background: #15626c;
 }
-.candidate-detail {
-  margin-top: 10px;
-  padding: 12px;
-  background: #fff;
-  border: 1px solid #d5e4e7;
-  border-radius: 5px;
-  max-height: 520px;
-  overflow-y: auto;
-}
 .adopt-candidate-btn {
   display: flex;
   align-items: center;
@@ -2569,15 +2558,6 @@ details.storage-run summary {
 }
 .adopt-candidate-btn:hover {
   background: #15626c;
-}
-.candidate-detail {
-  margin-top: 10px;
-  padding: 12px;
-  background: #fff;
-  border: 1px solid #d5e4e7;
-  border-radius: 5px;
-  max-height: 520px;
-  overflow-y: auto;
 }
 .adopt-candidate-btn {
   display: flex;
@@ -3032,4 +3012,4 @@ button.enso-badge:focus-visible { outline: 3px solid #216890; outline-offset: 2p
 .harness-line { display: block; color: #496a59; border-left: 2px solid #6a9cc6; padding-left: 8px; margin-bottom: 4px; }
 
 /* HydroBASINS sub-basin layer (R03 supporting data) */
-.candidate-catchment { display: block; font-size: 10px; line-height: 1.55; color: #4c3a75; border-left: 2px solid #6d5a9e; padding-left: 8px; margin: 4px 0 8px; }
+.candidate-detail .candidate-catchment { color: #4c3a75; border-left: 2px solid #6d5a9e; padding-inline-start: 8px; margin-block: 6px 8px; overflow-wrap: anywhere; }

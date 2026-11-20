@@ -31,7 +31,15 @@
 .landscape-shell .panel-top { padding: 16px; }
 .landscape-shell .panel-top h2 { font-size: 23px; }
 .landscape-shell .layer-toggle { top: 76px; left: auto; right: 14px; }
-.landscape-shell .layer-panel { top: 120px; left: auto; right: 14px; max-height: 55dvh; overflow: auto; }
+.landscape-shell .layer-panel { top: 120px; left: auto; right: 14px; overflow: auto; }
+.landscape-shell :is(.side-panel, .layer-panel, .placement-review, .evidence-card),
+.landscape-shell .conversation-slot .decision-desk {
+  max-height: 45vh;
+  max-height: 45dvh;
+  overflow-y: auto;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
 .landscape-shell .map-summary { position: absolute; top: 124px; right: 14px; width: 190px; padding: 10px; background: var(--paper); border-radius: 8px; font-size: 12px; }
 .landscape-shell .map-summary:not([open]) > :not(summary) { display: none; }
 .landscape-shell .map-summary summary { cursor: pointer; }
@@ -198,7 +206,7 @@
   border-radius: 50%;
   background: var(--paper);
 }
-.landscape-shell :is(button, summary, input, select, textarea, a[href]):focus-visible {
+.landscape-shell :is(button, summary, input, select, textarea, a[href], [tabindex="0"]):focus-visible {
   outline: 2px solid #15598b;
   outline-offset: 2px;
   box-shadow: 0 0 0 2px #fffdf7;
