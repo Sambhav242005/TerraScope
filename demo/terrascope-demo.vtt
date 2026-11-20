@@ -1,57 +1,87 @@
 WEBVTT
 
-00:00:00.250 --> 00:00:02.034
+00:00:00.334 --> 00:00:01.834 line:73% position:50% size:80% align:center
 Where could floodwater go?
 
-00:00:03.250 --> 00:00:08.308
-I’m a student, and I built TerraScope to explore
-that question along Bihar’s Gandak River.
+00:00:03.334 --> 00:00:05.258 line:73% position:50% size:80% align:center
+I’m a student, and I built TerraScope
 
-00:00:10.250 --> 00:00:13.734
-I scrub from September twenty-eighth to October
-second.
+00:00:05.258 --> 00:00:08.108 line:73% position:50% size:80% align:center
+to explore that question
+along Bihar’s Gandak River.
 
-00:00:13.974 --> 00:00:21.717
-ERA5 reconstructs rainfall. GloFAS models river
-flow. The landscape stays fixed as the readings
-change.
+00:00:10.334 --> 00:00:13.534 line:73% position:50% size:80% align:center
+I scrub from 28 September to 2 October.
 
-00:00:23.250 --> 00:00:27.469
-In Explore, the terrain screen flags low spots
-near Sonpur.
+00:00:14.058 --> 00:00:16.210 line:73% position:50% size:80% align:center
+ERA5 reconstructs rainfall.
 
-00:00:27.709 --> 00:00:32.447
-A field team can use this list to decide where to
-survey for temporary water storage.
+00:00:16.478 --> 00:00:18.490 line:73% position:50% size:80% align:center
+GLOFAS models river flow.
 
-00:00:33.250 --> 00:00:37.774
-I open one depression and check its footprint and
-estimated volume up to the spill rim.
+00:00:18.753 --> 00:00:21.517 line:73% position:50% size:80% align:center
+The landscape stays fixed
+as the readings change.
 
-00:00:38.014 --> 00:00:42.567
-The card shows that usable storage is still
-unknown and suitability is unassessed.
+00:00:23.334 --> 00:00:27.269 line:73% position:50% size:80% align:center
+In Explore, the terrain screen
+flags low spots near Sonepur.
 
-00:00:45.250 --> 00:00:48.374
-The cross-section shows where the terrain dips.
+00:00:27.793 --> 00:00:29.932 line:73% position:50% size:80% align:center
+A field team can use this list
+to decide where
 
-00:00:48.614 --> 00:00:54.287
-Before relying on it, I’d ask a field team to
-survey the ground and check how water actually
-drains.
+00:00:29.932 --> 00:00:32.247 line:73% position:50% size:80% align:center
+to survey for temporary water storage.
 
-00:00:55.250 --> 00:01:00.034
-I asked my AI agent to deploy TerraScope with
-Embarko and give me a public link.
+00:00:33.334 --> 00:00:35.258 line:73% position:50% size:80% align:center
+I open 1 depression
+and check its footprint
 
-00:01:00.274 --> 00:01:06.072
-The agent built and deployed the prototype, so
-someone else can open the same map and inspect
-the evidence.
+00:00:35.258 --> 00:00:37.574 line:73% position:50% size:80% align:center
+and estimated volume
+up to the spill rim.
 
-00:01:09.250 --> 00:01:12.024
+00:00:38.098 --> 00:00:40.393 line:73% position:50% size:80% align:center
+The card shows that usable storage
+is still unknown
+
+00:00:40.393 --> 00:00:42.367 line:73% position:50% size:80% align:center
+and suitability is unassessed.
+
+00:00:45.334 --> 00:00:48.174 line:73% position:50% size:80% align:center
+The cross-section shows
+where the terrain dips.
+
+00:00:48.698 --> 00:00:51.047 line:73% position:50% size:80% align:center
+Before relying on it,
+I’d ask a field team
+
+00:00:51.047 --> 00:00:54.087 line:73% position:50% size:80% align:center
+to survey the ground and check
+how water actually drains.
+
+00:00:55.334 --> 00:00:57.608 line:73% position:50% size:80% align:center
+I asked my AI agent to deploy TerraScope
+
+00:00:57.608 --> 00:00:59.834 line:73% position:50% size:80% align:center
+with Embarko and give me a public link.
+
+00:01:00.358 --> 00:01:02.509 line:73% position:50% size:80% align:center
+The agent built and deployed
+the prototype,
+
+00:01:02.509 --> 00:01:04.305 line:73% position:50% size:80% align:center
+so someone else can open the same map
+
+00:01:04.305 --> 00:01:05.872 line:73% position:50% size:80% align:center
+and inspect the evidence.
+
+00:01:09.334 --> 00:01:11.824 line:73% position:50% size:80% align:center
 Try TerraScope at the address on screen.
 
-00:01:12.264 --> 00:01:16.798
-Replay the dates, open a candidate, and see what
-you’d check in the field.
+00:01:12.348 --> 00:01:14.718 line:73% position:50% size:80% align:center
+Replay the dates, open a candidate,
+
+00:01:14.718 --> 00:01:16.598 line:73% position:50% size:80% align:center
+and see what you’d check in the field.

@@ -144,10 +144,22 @@ Verification uses `node tests/planning-journey-check.mjs` with a local UI at por
 
 Modern Web Guidance guide `accessibility` informed the native action and confirmation buttons and the polite status announcement.
 
-## Public challenge demo — 20 November 2026 (R03/R10/R14)
+## Initial portrait challenge demo — 20 November 2026 (R03/R10/R14)
 
-The 78-second portrait cut in `demo/terrascope-demo.mp4` shows the public app’s 28 September–2 October 2024 daily replay (R10) and the terrain-depression screen with geometric capacity, unknown usable storage and unassessed suitability (R03). The public site still used its 3D explorer and Explore navigation when checked against local commit `113b443`. All product footage came from the public site. The prior Embarko deployment appears as a labeled prompt reconstruction and ends with the verified public URL and challenge hashtag.
+The original 78-second portrait cut at commit `968fe8b` shows the public app’s 28 September–2 October 2024 daily replay (R10) and the terrain-depression screen with geometric capacity, unknown usable storage and unassessed suitability (R03). The public site still used its 3D explorer and Explore navigation when checked against local commit `113b443`. All product footage came from the public site. The prior Embarko deployment appears as a labeled prompt reconstruction and ends with the verified public URL and challenge hashtag.
 
 The video includes a labeled local synthetic voice, synchronized on-screen captions, a matching downloadable WebVTT file and an editable rehearsal script. The companion `demo/terrascope-clean.mp4` uses the same timing with silent, caption-free footage for recording a replacement voice and personalized introduction. The Modern Web Guidance `accessibility` guide informed the synchronized WebVTT and text alternatives.
 
 Evidence (R14): Playwright rehearsed and recorded using desktop Edge. FFmpeg checked both portrait exports and sampled frames at story transitions and within scenes. The rehearsal page played the MP4 from both `file:` and local HTTP at a 360px viewport. Cue mode held at the boundary until Next, and continuous mode crossed the boundary. Simulated recognition exercised interim and final text and transcript download. Microphone permissions and real speech recognition remain unverified.
+
+## Landscape challenge cut and map card layout — 20 November 2026 (R01/R03/R06/R10/R14)
+
+The [narrated cut](../demo/terrascope-demo.mp4) and [silent cut](../demo/terrascope-clean.mp4) run for 78 seconds at 1920 × 1080, 30 fps. Playwright recorded the public app in desktop Edge at 1600 × 720. Capture-only CSS reflowed its header and review cards. Python drove FFmpeg to place those pixels at their original scale, add labels and captions, and mux the existing Windows synthetic voice. The deployment prompt is a labeled reconstruction. The current repository's panel changes have not been deployed to the public app.
+
+The footage label starts at y=64 and the app at y=104. The caption band ends at y=916, leaving 164 pixels clear. The renderer checks text length and samples the encoded midpoint of each of the 25 captions for visible text inside the band. The [script](../demo/script.md), eight editable rehearsal cues and [WebVTT](../demo/terrascope-demo.vtt) use digit dates and the requested glossary. See the [recording briefs and rebuild commands](EMBARKO_CHALLENGE_VIDEO.md).
+
+The map context panel and storage candidate card scroll at up to 45% of viewport height. Status labels wrap below their metadata. The candidate fixture and sub-basin text fit at 1440 × 1000 and 360 × 800 in Edge. Keyboard End scrolled the focused card at both sizes. The recording checks visible header contents and status-label separation in the public layout. Seven decoded frames were visually reviewed across the replay, list, detail, evidence, transect, prompt and closing URL.
+
+`node tests/demo-rehearsal-check.mjs` verified native seeking, cue hold on an overrun, Next, display and download of recognized text, and native WebVTT placement with the controls visible. Recognition used simulated events. Physical microphone recognition and phone playback remain unverified. The planning journey, 297 unit tests and production build passed. The build retains its existing bundle-size advisory.
+
+Modern Web Guidance guides `responsive-design`, `css-layout` and `accessibility` informed aspect-ratio preservation in the rehearsal player, viewport-relative card scrolling and synchronized captions.

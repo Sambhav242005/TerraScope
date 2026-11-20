@@ -12,17 +12,17 @@ window.DEMO_CUES = [
   {
     "start": 10,
     "end": 23,
-    "text": "I scrub from September twenty-eighth to October second. ERA5 reconstructs rainfall. GloFAS models river flow. The landscape stays fixed as the readings change."
+    "text": "I scrub from 28 September to 2 October. ERA5 reconstructs rainfall. GLOFAS models river flow. The landscape stays fixed as the readings change."
   },
   {
     "start": 23,
     "end": 33,
-    "text": "In Explore, the terrain screen flags low spots near Sonpur. A field team can use this list to decide where to survey for temporary water storage."
+    "text": "In Explore, the terrain screen flags low spots near Sonepur. A field team can use this list to decide where to survey for temporary water storage."
   },
   {
     "start": 33,
     "end": 45,
-    "text": "I open one depression and check its footprint and estimated volume up to the spill rim. The card shows that usable storage is still unknown and suitability is unassessed."
+    "text": "I open 1 depression and check its footprint and estimated volume up to the spill rim. The card shows that usable storage is still unknown and suitability is unassessed."
   },
   {
     "start": 45,

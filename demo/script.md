@@ -12,15 +12,15 @@ I’m a student, and I built TerraScope to explore that question along Bihar’s
 
 **0:10**
 
-I scrub from September twenty-eighth to October second. ERA5 reconstructs rainfall. GloFAS models river flow. The landscape stays fixed as the readings change.
+I scrub from 28 September to 2 October. ERA5 reconstructs rainfall. GLOFAS models river flow. The landscape stays fixed as the readings change.
 
 **0:23**
 
-In Explore, the terrain screen flags low spots near Sonpur. A field team can use this list to decide where to survey for temporary water storage.
+In Explore, the terrain screen flags low spots near Sonepur. A field team can use this list to decide where to survey for temporary water storage.
 
 **0:33**
 
-I open one depression and check its footprint and estimated volume up to the spill rim. The card shows that usable storage is still unknown and suitability is unassessed.
+I open 1 depression and check its footprint and estimated volume up to the spill rim. The card shows that usable storage is still unknown and suitability is unassessed.
 
 **0:45**
 
