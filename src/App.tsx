@@ -369,7 +369,7 @@ export default function App() {
     [historyRows, setHistoryRows] = useState<HistoryRow[] | null>(null),
     [showGuide, setShowGuide] = useState(false),
     [showAssets, setShowAssets] = useState(true),
-    [terrain, setTerrain] = useState(true),
+    [terrain, setTerrain] = useState(false),
     [layers, setLayers] = useState(false),
     [search, setSearch] = useState(""),
     [draft, setDraft] = useState(() => {
@@ -397,6 +397,11 @@ export default function App() {
   const [historyFrame, setHistoryFrame] = useState<HistoryFrame | null>(null);
   const [historyMode, setHistoryMode] = useState(false);
   const panelTrigger = useRef<HTMLButtonElement | null>(null);
+  const contextPanel = useRef<HTMLElement>(null);
+  const resultTrigger = useRef<HTMLButtonElement>(null);
+  const addResourceInput = useRef<HTMLInputElement>(null);
+  const resourceInspector = useRef<HTMLElement>(null);
+  const proposalInspector = useRef<HTMLDivElement>(null);
   const closePanel = () => { setPanel(null); panelTrigger.current?.focus(); };
   const openPanel = (next: WorkspacePanel, trigger?: HTMLButtonElement) => {
     if (trigger) panelTrigger.current = trigger;
@@ -411,18 +416,33 @@ export default function App() {
   const pendingPlacement = useRef<{item: Intervention; areaKey: string; autoAreaMoved: boolean; target: {lat:number;lon:number}; success: string} | null>(null);
   const placementReview = usePlacementChecks(proposalItems, saved.area);
   function chooseArea(target:MapTarget) { storageAbort.current?.abort();lastStorageRun.current=null;setStorageRun(null);setStorageWater(null);setStorageBusy(false);setPlacementLat(String(target.lat));setPlacementLon(String(target.lon));setMapTarget(target);update({area:{lat:target.lat,lon:target.lon},mapTarget:target});setActivePlacementTool('select');setSelectedIntervention(null);setSelectedStorage(null);setPlacementError('');setPlacementAttempt(null);setCameraPoint(null);pendingPlacement.current=null; }
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const deskTrigger = useRef<HTMLButtonElement>(null);
+  const deskSlot = useRef<HTMLDivElement>(null);
+  const placeSearch = useRef<HTMLDetailsElement>(null);
   const [storageRun, setStorageRun] = useState<ScreeningRun | null>(null),
     [storageWater, setStorageWater] = useState<StoredWater | null>(null),
     [storageBusy, setStorageBusy] = useState(false),
     [storagePhase, setStoragePhase] = useState(""),
     [showCandidates, setShowCandidates] = useState(true),
     [showWaterLayer, setShowWaterLayer] = useState(true),
-    [showDecisionDesk, setShowDecisionDesk] = useState(true),
+    [showDecisionDesk, setShowDecisionDesk] = useState(false),
     [showBasins, setShowBasins] = useState(false),
     [basins, setBasins] = useState<BasinBundle | null>(null),
     [selectedStorage, setSelectedStorage] = useState<string | null>(null);
-  const closeDecisionDesk = useCallback(() => setShowDecisionDesk(false), []);
+  const closeDecisionDesk = useCallback(() => {
+    setShowDecisionDesk(false);
+    deskTrigger.current?.focus({ preventScroll: true });
+  }, []);
+  useEffect(() => {
+    if (showDecisionDesk) deskSlot.current?.querySelector("input")?.focus({ preventScroll: true });
+  }, [showDecisionDesk]);
+  useEffect(() => {
+    if (panel && contextPanel.current) contextPanel.current.scrollTop = 0;
+  }, [panel]);
+  useEffect(() => {
+    if (adding) addResourceInput.current?.focus();
+  }, [adding]);
   const storageAbort = useRef<AbortController | null>(null),
     lastStorageRun = useRef<{ hash: string; lat: number; lon: number } | null>(
       null,
@@ -718,37 +738,16 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!sources && !showTable && !showGuide && !showEnso) return;
-    const old = document.activeElement as HTMLElement;
     const dialog = dialogRef.current;
-    const items = () =>
-      Array.from(
-        dialog?.querySelectorAll<HTMLElement>(
-          'button,a,input,[tabindex="0"]',
-        ) ?? [],
-      );
-    items()[0]?.focus();
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setSources(false);
-        setShowTable(false);
-        setShowGuide(false);
-        setShowEnso(false);
-      }
-      if (e.key === "Tab") {
-        const a = items();
-        if (e.shiftKey && document.activeElement === a[0]) {
-          e.preventDefault();
-          a.at(-1)?.focus();
-        } else if (!e.shiftKey && document.activeElement === a.at(-1)) {
-          e.preventDefault();
-          a[0]?.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", handler);
+    const opener = document.activeElement;
+    dialog?.showModal();
     return () => {
-      document.removeEventListener("keydown", handler);
-      old?.focus();
+      dialog?.close();
+      queueMicrotask(() => {
+        if (opener instanceof HTMLElement && !dialogRef.current?.open) {
+          opener.focus({ preventScroll: true });
+        }
+      });
     };
   }, [sources, showTable, showGuide, showEnso]);
   const onboarding: OnboardingReport | null = useMemo(
@@ -1242,7 +1241,10 @@ export default function App() {
       <button
         className={`resource-row ${selected === a.id ? "active" : ""}`}
         key={a.id}
-        onClick={() => choose(a.id)}
+        onClick={() => {
+          choose(a.id);
+          requestAnimationFrame(() => resourceInspector.current?.focus());
+        }}
       >
         <span
           className={`resource-icon ${a.kind === "hospital" || a.kind === "clinic" ? "red" : ""}`}
@@ -1299,9 +1301,11 @@ export default function App() {
         </button>
         <button
           className="source-top ask-map-btn"
+          ref={deskTrigger}
           aria-label="Ask the map — decision workspace"
           aria-expanded={showDecisionDesk}
-          onClick={() => setShowDecisionDesk((v) => !v)}
+          aria-controls="map-conversation"
+          onClick={() => showDecisionDesk ? closeDecisionDesk() : setShowDecisionDesk(true)}
         >
           <MessagesSquare size={16} />
           <span>Ask the map</span>
@@ -1405,12 +1409,27 @@ export default function App() {
         )}
       </div>
       </details>
-      <details className="workspace-disclosure search-disclosure"><summary>Search places / change area</summary><PlaceSearch onChoose={chooseArea}/></details>
+      <details ref={placeSearch} className="workspace-disclosure search-disclosure"><summary>Search places</summary><PlaceSearch onChoose={target => {
+        chooseArea(target);
+        const disclosure = placeSearch.current;
+        if (disclosure) {
+          disclosure.open = false;
+          disclosure.querySelector("summary")?.focus({ preventScroll: true });
+        }
+      }}/></details>
       <div className="proposal-controls">
         <button onClick={() => setCoordinatePlacement(v => !v)} aria-expanded={coordinatePlacement}>Place by coordinates</button>
         <details className="proposals-details"><summary>Proposals ({proposalItems.length}) / checks</summary>
           <div className="proposal-dropdown">
-            {proposalItems.length === 0 ? <p>No proposals yet. Choose a placement tool or enter coordinates.</p> : proposalItems.map(item => <button key={item.id} onClick={() => { setSelectedIntervention(item.id); setSelected(null); setSelectedStorage(null); }}>
+            {proposalItems.length === 0 ? <p>No proposals yet. Choose a placement tool or enter coordinates.</p> : proposalItems.map(item => <button key={item.id} onClick={event => {
+              const disclosure = event.currentTarget.closest("details");
+              if (disclosure) disclosure.open = false;
+              setSelectedIntervention(item.id);
+              setSelected(null);
+              setSelectedStorage(null);
+              setPanel("Explore");
+              requestAnimationFrame(() => proposalInspector.current?.focus());
+            }}>
               {item.name} / {placementReview.state === 'loading' ? 'checking' : placementReview.checks[item.id]?.status ?? 'unknown'}
             </button>)}
           </div>
@@ -1460,7 +1479,7 @@ export default function App() {
           ["Compare", "Compare", GitCompareArrows],
           ["Field checks", "Field checks", ClipboardCheck],
           ["Response plan", "Draft plan", FileText],
-        ] as const).map(([name, label, Icon]) => <button key={name} aria-expanded={panel === name} aria-controls="landscape-context" onClick={e => openPanel(name, e.currentTarget)}><Icon size={16} />{label}</button>)}
+        ] as const).map(([name, label, Icon]) => <button key={name} aria-label={label} aria-expanded={panel === name} aria-controls="landscape-context" onClick={e => openPanel(name, e.currentTarget)}><Icon size={16} />{name === "Explore" ? "Candidates" : label}</button>)}
         <button onClick={() => setShowEnso(true)}><Waves size={16} />Climate context</button>
       </nav>
       <main className="workspace">
@@ -1504,9 +1523,8 @@ export default function App() {
               placementEvidence={placementReview.evidence}
               onDismissPlacementAttempt={dismissPlacementAttempt}
             />
-          {areaGeometry.features.length > 0 && <button className="air-map-key" onClick={() => setPanel("Environment")}>Purple point: current air model / ~45 km, not a monitor</button>}
       {mapTarget && <details className="area-data-note"><summary>{mapTarget.label} / Sonpur history stays at its source location</summary> {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks…' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall and discharge series remain the original Sonpur case and do not describe this selected area. NRSC dated map-color snapshots are used only where their published bounds cover the footprint. Terrain screening runs for the selected centre; suitability remains unverified.</details>}
-          <div className="landscape-view-controls" aria-label="Map perspective"><button aria-pressed={!terrain} onClick={() => setTerrain(false)}>2D</button><button aria-pressed={terrain} onClick={() => setTerrain(true)}>3D</button><span>Real map / proposals are not measured effects</span></div>
+          <div className="landscape-view-controls" role="group" aria-label="Map perspective"><button aria-pressed={!terrain} onClick={() => setTerrain(false)}>2D</button><button aria-pressed={terrain} onClick={() => setTerrain(true)}>3D</button></div>
           <button
             className="layer-toggle"
             onClick={() => setLayers(!layers)}
@@ -1576,6 +1594,7 @@ export default function App() {
                   <i className={on ? "switch on" : "switch"} />
                 </button>
               ))}
+              {areaGeometry.features.length > 0 && <button className="layer-source" onClick={() => { setLayers(false); setPanel("Environment"); }}>Purple point · modeled air quality (~45 km)</button>}
               <button
                 className="layer-item unavailable"
                 onClick={() => setSources(true)}
@@ -1628,7 +1647,7 @@ export default function App() {
             </button>
           </div>
         </section>
-        <aside className="side-panel" id="landscape-context" hidden={panel === null} aria-label="Map context panel" onKeyDown={e => { if (e.key === "Escape") closePanel(); }}>
+        <aside ref={contextPanel} className="side-panel" id="landscape-context" hidden={panel === null} aria-label="Map context panel" onKeyDown={e => { if (e.key === "Escape") closePanel(); }}>
           <button className="context-close" onClick={closePanel} aria-label="Close context panel"><X size={18} /></button>
           <div hidden={panel !== "River history"}>
             <RiverHistory onMap={closePanel} onSources={() => setSources(true)} onFrame={setHistoryFrame} active={panel === "River history"} />
@@ -1636,15 +1655,6 @@ export default function App() {
           <div hidden={panel !== "Environment"}><AreaReviewPanel latitude={saved.area.lat} longitude={saved.area.lon} onGeometryChange={setAreaGeometry} onReviewChange={setAreaReview} evidenceSelection={evidenceSelection} active={panel === "Environment"} /></div>
           <div hidden={panel === "River history" || panel === "Environment"}>
           <div className="panel-top">
-            <span className="eyebrow">
-              {panel === "Explore"
-                ? "PLACE → EVIDENCE → ACTION"
-                : panel === "Compare"
-                  ? "EXPLORE THE ASSUMPTIONS"
-                  : panel === "Field checks"
-                    ? "GROUND THE DATA"
-                    : "PREPARE WITH CONTEXT"}
-            </span>
             <h2>
               {panel === "Explore"
                 ? "Candidates & resources"
@@ -1658,13 +1668,13 @@ export default function App() {
               {panel === "Explore"
                 ? "Explore terrain candidates and mapped resources. Site suitability remains unverified."
                 : panel === "Compare"
-                  ? "A transparent runoff experiment. Change assumptions and inspect their effect."
+                  ? "Compare proposal geometry on the map or test runoff assumptions."
                   : panel === "Field checks"
                     ? "Record local observations and keep uncertainty visible."
                     : "Turn the available evidence into a reviewable preparation checklist."}
             </p>
           </div>
-          {panel === "Compare" && <section className="visual-comparison" aria-label="Proposal visibility comparison"><h3>See the proposal</h3><p>Switch geometry in place, with the same camera and date. No calculated flood benefit.</p><div><button aria-pressed={!showInterventions} onClick={() => setShowInterventions(false)}>Existing place</button><button aria-pressed={showInterventions} onClick={() => setShowInterventions(true)}>With proposals ({proposalItems.length})</button></div></section>}
+          {panel === "Compare" && <section className="visual-comparison" aria-label="Proposal visibility comparison"><h3>Proposal geometry</h3><div><button aria-pressed={!showInterventions} onClick={() => setShowInterventions(false)}>Existing place</button><button aria-pressed={showInterventions} onClick={() => setShowInterventions(true)}>With proposals ({proposalItems.length})</button></div></section>}
           {panel === "Explore" && <button className="secondary" onClick={() => setAdding(!adding)}><Plus size={15} />Add resource</button>}
           {panel === "Explore" && <Findings historyRows={historyRows} manifest={manifest} storageRun={storageRun} proposalCount={(saved.interventions ?? []).length} replayDate={days[day]} ensoYear={2024} onOpenEnso={() => { setSources(false); setShowTable(false); setShowGuide(false); setShowEnso(true); }} />}
           <section className="storage-panel" aria-label="Natural water-storage screening" hidden={panel !== "Explore"}>
@@ -1929,6 +1939,8 @@ export default function App() {
           {inspectedIntervention && (
             <div
               className="intervention-inspector"
+              ref={proposalInspector}
+              tabIndex={-1}
               role="region"
               aria-label="Intervention parameters"
             >
@@ -2003,14 +2015,15 @@ export default function App() {
               <h3>Screening and proposals</h3>
               <p>{storageBusy ? `Screening in progress: ${storagePhase}. Results are not ready.` : storageRun?.status === 'succeeded' ? `${storageRun.candidateCountTotal} DEM depressions screened; suitability unassessed.` : 'Terrain results unavailable. Missing evidence is not zero storage.'}</p>
               <p>{proposalItems.length} proposal(s). Assumed/geometric volumes are not available storm storage. Placed objects do not change the illustrative runoff calculation.</p>
-              <p>Local AI is not connected. Placement checks use deterministic map intersections, not AI or engineering certification.</p>
+              <p>Placement checks use map intersections. Engineering review is still required.</p>
             </section>
           )}
-          {adding && (
+          {adding && (panel === "Explore" || panel === "Field checks") && (
             <div className="inline-form">
               <label>
                 Resource name
                 <input
+                  ref={addResourceInput}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Proposed shelter"
@@ -2133,7 +2146,7 @@ export default function App() {
                 )}
               </div>
               {active && (
-                <section className="evidence-card">
+                <section className="evidence-card" ref={resourceInspector} tabIndex={-1}>
                   <div className="section-title">
                     <ClipboardCheck size={18} />
                     <h3>{active.name}</h3>
@@ -2164,15 +2177,14 @@ export default function App() {
                       maxLength={100}
                     />
                   </label>
-                  <label>
-                    Observation
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="What was checked? Include observation time, method and remaining uncertainty."
-                      maxLength={3000}
-                    />
-                  </label>
+                  <label className="observation-label" htmlFor="field-observation">Observation</label>
+                  <textarea
+                    id="field-observation"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="What was checked? Include observation time, method and remaining uncertainty."
+                    maxLength={3000}
+                  />
                   <div className="button-pair">
                     <button
                       className="secondary"
@@ -2219,7 +2231,8 @@ export default function App() {
           )}
           {panel === "Compare" && (
             <div className="compare-panel">
-              <p className="placement-model-note">Parameter experiment only. Placed interventions are not model inputs. An intervention-effect comparison is unavailable until catchment, outlet and other required model adapters are connected. Rainfall is identical in both runs.</p>
+              <h3>Illustrative runoff experiment</h3>
+              <p className="placement-model-note">Both runs use the same rainfall. This experiment varies the runoff assumptions. Proposal effects require catchment and outlet models.</p>
               <div className="notice-card">
                 <Info size={17} />
                 <span>
@@ -2487,7 +2500,9 @@ export default function App() {
           <span className="day-count">Day {day + 1} / 9</span>
           <button
             className="secondary table-button"
+            ref={resultTrigger}
             aria-expanded={showResults}
+            aria-controls="result-timeline"
             onClick={() => setShowResults((v) => !v)}
           >
             Result timeline
@@ -2570,8 +2585,14 @@ export default function App() {
           waterLevel={waterLevel}
           storageRun={storageRun}
           interventions={saved.interventions ?? []}
-          onOpenHistory={() => openPanel("River history")}
-          onClose={() => setShowResults(false)}
+          onOpenHistory={() => {
+            openPanel("River history");
+            requestAnimationFrame(() => contextPanel.current?.scrollIntoView({ block: "nearest" }));
+          }}
+          onClose={() => {
+            setShowResults(false);
+            resultTrigger.current?.focus();
+          }}
           open={showResults}
           onOpen={() => setShowResults(true)}
         />
@@ -2594,12 +2615,10 @@ export default function App() {
         </div>
       )}
       {(sources || showTable || showGuide) && (
-        <div className="modal-backdrop">
-          <div
+          <dialog
             className="modal"
             ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
+            onCancel={() => { setSources(false); setShowTable(false); setShowGuide(false); }}
             aria-label={
               showGuide
                 ? "User guide and concept overview"
@@ -2878,16 +2897,13 @@ export default function App() {
             )}
             </>
             )}
-          </div>
-        </div>
+          </dialog>
       )}
       {showEnso && (
-        <div className="modal-backdrop">
-          <div
+          <dialog
             className="modal"
             ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
+            onCancel={() => setShowEnso(false)}
             aria-label="ENSO climate context"
           >
             <button
@@ -2898,10 +2914,9 @@ export default function App() {
               <X size={21} />
             </button>
             <EnsoContext onClose={() => setShowEnso(false)} />
-          </div>
-        </div>
+          </dialog>
       )}
-      <div className="conversation-slot" hidden={!showDecisionDesk}>
+      <div className="conversation-slot" id="map-conversation" ref={deskSlot} hidden={!showDecisionDesk} onKeyDown={e => { if (e.key === "Escape") closeDecisionDesk(); }}>
         <DecisionDesk
           context={{
             history: historyRows,

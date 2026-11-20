@@ -1,5 +1,7 @@
 # Delivery record — TerraScope prototype
 
+The [20 November 2026 visual audit](UI_AUDIT.md) records desktop and 360px rendered coverage, map-first layout changes, keyboard and replay improvements, and outstanding UI evidence for R01–R21.
+
 > Current status (14 November 2026): [Latest delivery, verification and remaining gaps](CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R08, R10, R15, R16 and R17 were delivered on 14 November 2026; the other requirements remain active.
 
 

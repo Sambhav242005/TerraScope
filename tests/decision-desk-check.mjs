@@ -39,6 +39,7 @@ else fail(`No flow-history citation in: ${citations.join(" | ")}`);
 
 // 3. Advisory draft downloads a markdown file; nothing is sent anywhere
 const downloadPromise = page.waitForEvent("download", { timeout: 15000 });
+await desk.getByText("Download draft documents", { exact: true }).click();
 await desk.getByRole("button", { name: /Pre-monsoon advisory draft/ }).click();
 const download = await downloadPromise;
 if (download.suggestedFilename() === "pre-monsoon-advisory-draft.md") ok("Advisory draft downloads as pre-monsoon-advisory-draft.md (human issues it, not the tool)");

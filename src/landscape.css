@@ -1,7 +1,7 @@
 /* Persistent landscape shell. Panels never own or replace the geographic view. */
 .landscape-shell { --dock: 0px; --paper: #fffdf7; position: relative; min-height: 100dvh; background: #e8edde; }
 .landscape-shell.conversation-open { --dock: 350px; }
-.landscape-shell [hidden] { display: none !important; }
+.landscape-shell [hidden]:not([hidden="until-found"]) { display: none !important; }
 .landscape-shell .topbar { height: 64px; padding: 0 20px; flex-wrap: nowrap; gap: 18px; background: var(--paper); }
 .landscape-shell .brand { padding: 0; font-size: 24px; }
 .header-place { display: flex; align-items: center; gap: 6px; border-left: 1px solid #cbd4c6; padding-left: 16px; max-width: 240px; font-size: 13px; }
@@ -139,3 +139,135 @@
 .landscape-shell .map-stage .area-data-note { position: absolute; bottom: 210px; left: 130px; z-index: 5; max-width: min(400px, calc(100% - 150px)); max-height: 180px; overflow: auto; background: var(--paper); border-radius: 8px; border: 1px solid #cbd5c4; padding: 10px; }
 .landscape-shell .reset-map { left: auto; right: 14px; bottom: 114px; }
 @media(max-width:760px) { .landscape-shell .map-stage .area-data-note { left: 8px; max-width: calc(100% - 24px); bottom: 200px; } }
+
+.landscape-shell .workspace { height: calc(100dvh - 256px); min-height: 440px; }
+.landscape-actions {
+  position: relative;
+  inset: auto;
+  padding: 6px 16px;
+  background: var(--paper);
+  border-bottom: 1px solid #d5ddce;
+}
+.landscape-shell .placement-disclosure { top: 103px; }
+.landscape-shell .side-panel { top: 12px; bottom: 12px; }
+.context-close {
+  align-self: flex-end;
+  flex: 0 0 40px;
+  width: 40px;
+  min-height: 40px;
+  margin-bottom: -46px;
+  display: grid;
+  place-items: center;
+}
+.landscape-shell .panel-top,
+.landscape-shell .history-intro,
+.landscape-shell .area-review > h2 { padding-inline-end: 52px; }
+.landscape-shell .panel-top p { color: #4f6355; font-size: 13px; }
+.landscape-shell .evidence-card .observation-label { margin-bottom: 0; }
+.landscape-shell .evidence-card textarea { margin-bottom: 12px; }
+.visual-comparison > div { flex-wrap: wrap; margin-top: 8px; }
+.landscape-shell .layer-toggle { top: 12px; }
+.landscape-shell .layer-panel { top: 58px; z-index: 12; background: var(--paper); }
+.landscape-shell .map-summary { top: 64px; }
+.landscape-shell .timeline-panel,
+.history-map-caption { position: relative; inset: auto; margin: 8px calc(var(--dock) + 12px) 8px 12px; }
+.landscape-view-controls { bottom: 30px; }
+.landscape-shell .basemap-control { bottom: 36px; left: 100px; right: auto; }
+.landscape-shell .reset-map { right: 54px; bottom: 34px; }
+.landscape-shell .map-warning { top: 120px; bottom: auto; }
+.landscape-shell .water-legend { bottom: 120px; }
+.landscape-shell dialog.modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(800px, calc(100% - 24px));
+  border: 1px solid #c7d3c2;
+  color: inherit;
+}
+.landscape-shell dialog::backdrop { background: #1731218c; }
+.landscape-shell dialog > .modal-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  margin: -12px -12px 0 8px;
+  z-index: 2;
+  width: 40px;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--paper);
+}
+.landscape-shell :is(button, summary, input, select, textarea, a[href]):focus-visible {
+  outline: 2px solid #15598b;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fffdf7;
+}
+.conversation-slot .decision-desk { position: fixed; top: 120px; }
+.conversation-slot .desk-drafts summary { cursor: pointer; padding-block: 4px; }
+
+@media (max-width: 760px) {
+  .landscape-shell .workspace { height: 52dvh; min-height: 340px; }
+  .landscape-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px 8px;
+    overflow: visible;
+  }
+  .landscape-actions button {
+    padding: 4px;
+    line-height: 1.15;
+    box-shadow: none;
+    gap: 3px;
+  }
+  .landscape-actions svg { flex: 0 0 12px; }
+  .landscape-shell .placement-bar .placement-btn { white-space: nowrap; }
+  .landscape-shell .workspace-commandbar { column-gap: 4px; }
+  .landscape-shell .workspace-commandbar .placement-bar {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, auto));
+    overflow: visible;
+    gap: 3px;
+  }
+  .landscape-shell .placement-bar .placement-btn { justify-content: center; padding-inline: 3px; }
+  .landscape-shell .placement-bar .placement-btn svg { display: none; }
+  .landscape-shell .search-disclosure { order: 0; }
+  .landscape-shell .workspace-commandbar .proposal-controls {
+    display: flex;
+    flex: 1 1 auto;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+  .landscape-shell .proposal-controls button,
+  .landscape-shell .proposal-controls summary { padding-inline: 6px; }
+  .landscape-shell .side-panel { inset: max(78px, 24%) 8px 8px; }
+  .landscape-shell .timeline-panel,
+  .history-map-caption { margin-inline: 8px; }
+  .landscape-shell .map-summary { top: 60px; max-width: 164px; }
+  .landscape-shell .basemap-control,
+  .landscape-shell .basemap-control:has(.indian-evidence[open]) {
+    inset: auto auto 82px 8px;
+    max-width: min(230px, calc(100% - 62px));
+  }
+  .landscape-view-controls { left: 8px; bottom: 32px; }
+  .landscape-shell .map-stage .area-data-note { bottom: 166px; }
+  .landscape-shell .water-legend { bottom: 172px; }
+  .landscape-shell .reset-map { right: 48px; bottom: 36px; }
+  .landscape-shell .timeline-top input[type=range] { order: 1; flex-basis: 65%; }
+  .landscape-shell .timeline-top .day-count { order: 2; }
+  .conversation-slot .decision-desk {
+    inset: auto 8px 8px;
+    margin: 0;
+    height: min(640px, 72dvh);
+    width: auto;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .landscape-shell .topbar button { min-width: 44px; min-height: 44px; }
+  .landscape-shell .proposal-controls button,
+  .landscape-shell .proposal-controls summary { min-height: 36px; }
+  .landscape-shell .proposal-controls details > summary { padding-inline: 6px; }
+}

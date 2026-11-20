@@ -26,7 +26,6 @@ const hiddenState = () =>
   page.evaluate(() => document.getElementById("result-timeline")?.getAttribute("hidden"));
 
 await page.goto(base);
-await page.getByRole("button", { name: "Explore", exact: true }).click();
 await page.locator(".maplibregl-canvas").waitFor();
 await page.waitForTimeout(3500);
 
@@ -76,15 +75,17 @@ const historyBody = await panel.innerText();
 if (/never as zero or interpolated/i.test(historyBody)) ok("Gap wording is explicit in history mode");
 else fail("History mode does not state that gaps are never zero");
 
-// 7. Switching back to the event and opening interactive history navigates to the River history view.
+// 7. Interactive history opens alongside the existing map.
 await panel.getByLabel("Event or year context").selectOption("event");
+await page.evaluate(() => { window.auditCanvas = document.querySelector(".maplibregl-canvas"); });
 await panel.getByRole("button", { name: "Open interactive history" }).click();
-await expect(page.getByRole("button", { name: "Explore the OSM map" })).toBeVisible();
-ok("Open interactive history switches to the 2015-2024 history view from the same flow");
+await expect(page.getByRole("region", { name: "River history" })).toBeVisible();
+expect(await page.evaluate(() => window.auditCanvas === document.querySelector(".maplibregl-canvas"))).toBe(true);
+ok("Interactive history opens without replacing the map canvas");
 
-// 8. The panel state lives in the App; switching tabs and back preserves it. Close, then
+// 8. Returning from history preserves the result panel state. Close, then
 // simulate find-in-page revealing the panel (beforematch) — the toggle must re-sync to expanded.
-await page.getByRole("button", { name: "Explore", exact: true }).click();
+await page.getByRole("button", { name: "Return to event replay" }).click();
 await page.locator(".maplibregl-canvas").waitFor();
 await page.waitForTimeout(1200);
 await expect(toggle).toHaveAttribute("aria-expanded", "true"); // persisted across the tab switch
@@ -100,7 +101,6 @@ ok("beforematch re-syncs the toggle to expanded (find-in-page reveals the panel)
 // 9. 360px layout: panel reveals without horizontal overflow.
 await page.setViewportSize({ width: 360, height: 800 });
 await page.goto(base);
-await page.getByRole("button", { name: "Explore", exact: true }).click();
 await page.locator(".maplibregl-canvas").waitFor();
 await page.waitForTimeout(2500);
 await page.getByRole("button", { name: "Result timeline", exact: true }).click();
@@ -110,7 +110,6 @@ else fail(`360px layout overflows to ${scrollWidth}px`);
 await page.screenshot({ path: "artifacts/result-timeline-360.png", fullPage: true });
 await page.setViewportSize({ width: 1440, height: 1000 });
 await page.goto(base);
-await page.getByRole("button", { name: "Explore", exact: true }).click();
 await page.locator(".maplibregl-canvas").waitFor();
 await page.waitForTimeout(2500);
 await page.getByRole("button", { name: "Result timeline", exact: true }).click();

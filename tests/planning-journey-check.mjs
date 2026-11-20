@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const origin = process.env.DEMO_URL ?? "http://127.0.0.1:5173";
 const live = process.env.LIVE_PLANNING === "1";
+const auditShots = process.env.AUDIT_SHOTS;
 const endpoint = "http://127.0.0.1:11435/v1/chat/completions";
 const center = { lat: 25.71, lon: 85.16 };
 const candidate = {
@@ -52,6 +53,7 @@ try {
     });
   }
   await page.goto(origin);
+  await page.getByRole("button", { name: /Ask the map/ }).click();
   const desk = page.getByRole("dialog", { name: /Ask the map/ });
   await expect(desk).toBeVisible();
   await expect(desk.locator(".desk-status")).toContainText("not connected");
@@ -85,6 +87,7 @@ try {
   await expect(page.getByRole("button", { name: "Close candidate details" })).toBeVisible();
 
   await preview("Adopt candidate c1.", "Add a planned basin for candidate #c1");
+  if (auditShots) await page.screenshot({ path: `${auditShots}/1440-planning-confirmation.png` });
   expect(await proposals()).toEqual([]);
   await apply.click();
   await expect(status).toHaveText("Added planned storage basin for candidate #c1.");
@@ -95,6 +98,7 @@ try {
   await apply.click();
   await expect(status).toContainText("Screening footprint intersects");
   await expect(pins).toHaveCount(1);
+  if (auditShots) await page.screenshot({ path: `${auditShots}/1440-planning-conflict.png` });
 
   await preview("Undo the last placement.", "Undo last placement");
   await apply.click();

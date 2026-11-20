@@ -322,7 +322,6 @@ export default function DecisionDesk({
           <strong>
             <MessagesSquare size={17} aria-hidden="true" /> Ask the map
           </strong>
-          <p>Evidence-backed answers for whoever steers the decision. Not a forecaster, not an engineer, not an authority.</p>
         </div>
         <button className="desk-close" onClick={onClose} aria-label="Close the decision workspace">
           <X size={16} aria-hidden="true" />
@@ -488,7 +487,8 @@ export default function DecisionDesk({
         </p>
       </details>
 
-      <div className="desk-drafts">
+      <details className="desk-drafts">
+        <summary>Download draft documents</summary>
         <label className="desk-audience">
           Advisory audience
           <input
@@ -507,9 +507,9 @@ export default function DecisionDesk({
           </button>
         </div>
         <p className="desk-config-note">
-          Both drafts download a markdown file for a human to review. TerraScope never sends, posts or registers anything; issuing a warning or an order is exclusively the authorised officer’s act.
+          Markdown drafts for review by the authorised officer.
         </p>
-      </div>
+      </details>
     </section>
   );
 }

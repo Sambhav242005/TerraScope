@@ -81,6 +81,7 @@ export default function ResultTimeline({
   const [rows, setRows] = useState<HistoryRow[] | null>(null);
   const [historyError, setHistoryError] = useState("");
   const hostRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (mode !== "history" || rows) return;
@@ -109,6 +110,12 @@ export default function ResultTimeline({
     else el.setAttribute("hidden", "until-found");
     return () => el.removeEventListener("beforematch", reveal);
   }, [open, onOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    hostRef.current?.scrollIntoView({ block: "nearest" });
+    titleRef.current?.focus({ preventScroll: true });
+  }, [open]);
 
   const entries = useMemo(
     () =>
@@ -140,7 +147,7 @@ export default function ResultTimeline({
     <div id="result-timeline" ref={hostRef}>
       <div className="result-timeline">
         <div className="result-timeline-head">
-          <h2 className="result-timeline-title">
+          <h2 className="result-timeline-title" ref={titleRef} tabIndex={-1}>
             <History size={14} aria-hidden="true" />
             Scenario result timeline
           </h2>
