@@ -1,3 +1,4 @@
+import type { AreaReview } from "../areaReview/contracts.ts";
 // Decision-support tools for the "Ask the map" workspace (R02/R12 support).
 // Every tool is deterministic and reads only data the app already loads or
 // verified run records. No tool invents a number: missing evidence is reported
@@ -21,6 +22,8 @@ export type ToolResult<T> =
   | { ok: false; reason: string; citations: EvidenceCitation[] };
 
 export type DecisionContext = {
+  workspaceRevision?: string;
+  areaReview?: { revision: string; review: AreaReview };
   history: HistoryRow[] | null;
   manifest: Array<{ id: string; retrieved?: string; sha256?: string }>;
   ensoYear: number;
@@ -36,7 +39,7 @@ const retrieved = (manifest: DecisionContext["manifest"], id: string): string =>
   return m.sha256 ? `${base}, sha256 ${m.sha256.slice(0, 12)}…` : base;
 };
 
-export function toolPeakDischarge(ctx: DecisionContext): ToolResult<{ peakM3s: number; date: string }> {
+export function toolPeakDischarge(ctx: DecisionContext): ToolResult<{ peakM3s: number; date: string; recordStart: string; recordEnd: string; units: string; interpretation: string }> {
   if (!ctx.history) {
     return { ok: false, reason: "2015–2024 record unavailable (flow/rain fetch failed)", citations: [{ id: "flow-history", detail: "fetch failed — nothing substituted" }] };
   }
@@ -48,7 +51,7 @@ export function toolPeakDischarge(ctx: DecisionContext): ToolResult<{ peakM3s: n
   for (const r of flows) if (r.flow > peak.flow) peak = r;
   return {
     ok: true,
-    value: { peakM3s: Math.round(peak.flow), date: peak.date },
+    value: { peakM3s: Math.round(peak.flow), date: peak.date, recordStart: ctx.history[0].date, recordEnd: ctx.history[ctx.history.length - 1].date, units: "m3/s", interpretation: "Historical GloFAS modeled daily river-cell discharge, not a gauge measurement, depth, inundation or forecast; cell-to-reach assignment and local skill unvalidated." },
     citations: [{ id: "flow-history", detail: `GloFAS via Open-Meteo, ${retrieved(ctx.manifest, "flow-history")}; cell 25.775°N 85.125°E (UTC)` }],
   };
 }
@@ -97,7 +100,7 @@ export function toolEnso(ctx: DecisionContext, year = ctx.ensoYear): ToolResult<
 }
 
 export function toolStorageCandidates(ctx: DecisionContext, limit = 5): ToolResult<{ total: number; top: Array<{ id: string; label: string; capacityM3: number; maxDepthToSpillM: number }> }> {
-  if (!ctx.storageRun) {
+  if (!ctx.storageRun || ctx.storageRun.status !== "succeeded") {
     return { ok: false, reason: "Storage screening has not completed for this session", citations: [{ id: "storage-screening", detail: "no completed run record" }] };
   }
   const top = [...ctx.storageRun.candidates]
@@ -114,7 +117,7 @@ export function toolStorageCandidates(ctx: DecisionContext, limit = 5): ToolResu
 }
 
 export function toolStorageDetail(ctx: DecisionContext, id: string): ToolResult<{ found: boolean } & Record<string, unknown>> {
-  const candidate = ctx.storageRun?.candidates.find((c) => c.id === id);
+  const candidate = ctx.storageRun?.status === "succeeded" ? ctx.storageRun.candidates.find((c) => c.id === id) : undefined;
   if (!candidate) {
     return { ok: false, reason: `Candidate ${id} is not in this session's screening record`, citations: [{ id: "storage-screening", detail: "no such candidate" }] };
   }
@@ -135,12 +138,21 @@ export function toolStorageDetail(ctx: DecisionContext, id: string): ToolResult<
   };
 }
 
-export function toolDataSources(ctx: DecisionContext): ToolResult<{ ids: string[] }> {
+export function toolDataSources(ctx: DecisionContext): ToolResult<{ ids: string[]; areaEvidence?: Record<string, unknown> }> {
   const ids = ctx.manifest.map((m) => m.id);
+  const attached = ctx.areaReview;
+  const review = attached && ctx.workspaceRevision && attached.revision === ctx.workspaceRevision ? attached.review : null;
+  const records = review ? [...review.reports, ...(review.air ? [review.air] : [])].slice(0, 30) : [];
+  const areaEvidence = attached ? {
+    state: review ? "attached-area-context" : "stale-or-unbound",
+    records: records.map(({ bounds: _bounds, ...record }) => ({ ...record, boundsMeaning: "No footprint or safe route supplied by this AI tool", ...("pm25" in record && record.status !== "available" ? { pm25: null, usAqi: null } : {}) })),
+    gaps: review ? [...review.gaps, ...(review.airError ? [review.airError] : [])] : ["Area evidence does not match the current workspace revision"],
+    interpretation: "Report references are not mapped wildlife corridors or observed flood polygons. Current modeled pollution is not a monitor observation or historical playback input.",
+  } : undefined;
   return {
     ok: true,
-    value: { ids },
-    citations: [{ id: "manifest", detail: `${ctx.manifest.length} manifest entries; each carries source, retrieval date and hash — see Data & sources` }],
+    value: { ids, ...(areaEvidence ? { areaEvidence } : {}) },
+    citations: [{ id: "manifest", detail: `${ctx.manifest.length} manifest entries; each carries source, retrieval date and hash — see Data & sources` }, ...records.map(record => ({ id: record.id, detail: `${record.provider}; ${record.sourceUrl}; ${record.version}; ${record.validTime}; ${record.status}; ${record.uncertainty}` }))],
   };
 }
 
@@ -183,6 +195,17 @@ export const TOOL_CATALOG = [
 
 /** Dispatch one tool call. Unknown tools are rejected, never ignored. */
 export function runTool(name: string, args: Record<string, unknown> | null, ctx: DecisionContext): string {
+  const spec = TOOL_CATALOG.find(tool => tool.name === name);
+  if (spec) {
+    if (!args || typeof args !== "object" || Array.isArray(args)) return json({ ok: false, reason: "Tool arguments must be a JSON object", citations: [] });
+    const schema = spec.parameters as { properties: Record<string, { type: string; minimum?: number; maximum?: number }>; required: readonly string[] };
+    for (const key of Object.keys(args)) {
+      const rule = schema.properties[key];
+      const value = args[key];
+      if (!rule || (rule.type === "integer" && (!Number.isInteger(value) || (rule.minimum != null && Number(value) < rule.minimum) || (rule.maximum != null && Number(value) > rule.maximum))) || (rule.type === "string" && (typeof value !== "string" || !value.trim() || value.length > 200))) return json({ ok: false, reason: "Invalid tool argument: " + key, citations: [] });
+    }
+    if (schema.required.some(key => !(key in args))) return json({ ok: false, reason: "Missing required tool argument", citations: [] });
+  }
   const a = args ?? {};
   switch (name) {
     case "peak_discharge": return json(toolPeakDischarge(ctx));

@@ -5,6 +5,14 @@
 
 Status: ERA5/GloFAS snapshots, OSM context/resources and terrain are connected as detailed below. Other entries remain candidate sources; integration is not scientific validation. Check current access, terms, coverage and latency for the selected pilot. No API availability is assumed merely because a portal is public.
 
+## Area environment additions — 17 November 2026 (R19–R21)
+
+All R01–R18 remain. `src/flood/areaReview/catalog.ts` is a curated reference index, not live general web search. Its rough Bihar envelope is discovery-only and is never rendered as an evidence polygon. FSI ISFR 2023 Volume II was downloaded and hashed; Saran district's 62.79 km² / 2.38% forest-cover statistic is regional, not a point measurement. MoEFCC/WII corridor and NRSC atlas references establish report availability, not Sonpur route/flood overlap. No rights-cleared wildlife or flood geometry was acquired.
+
+`query.ts` connects the public Open-Meteo air API (`cams_global`, GMT, one-day hourly PM2.5 and US AQI); actual Sonpur response is retained in `src/flood/areaReview/evidence/sonpur-air-live.json`. CAMS (~45 km native documented resolution) is modeled pollution, not CPCB monitor observations or Indian AQI. Returned sample point is displayable with attribution, not a cell footprint. CC BY 4.0 data and free non-commercial API terms are distinct; commercial use requires appropriate service provisioning. Current model data is independent of the historical playback date. Issue/run identifiers are missing, so this is not an issue-time historical forecast dataset.
+
+Source URLs, dates, hashes, restrictions and unconnected water/soil pollution dependencies: [area environment evidence](research/area-environment-evidence.md). Raw FSI PDF is locally ignored and never imported into the public bundle. Existing NRSC withholding is unchanged.
+
 ## Proposed inputs
 
 | Need | Candidate source | Use and limitation |

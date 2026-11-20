@@ -3,6 +3,12 @@
 > Current status (5 November 2026): [Latest delivery, verification and remaining gaps](docs/CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R01-R18 remain active.
 
 
+## Area environment scope — 17 November 2026
+
+Confirmed additions R19–R21 retain R01–R18: area wildlife/forest reports, historical flood-area search, and air quality/pollution. Implementation uses constrained evidence types; report geography and search envelopes cannot become invented routes or flood polygons. No precise wildlife tracking data is stored or displayed. Missing routes do not mean no route.
+
+Bounded delivery: automatic curated report lookup and live CAMS global modeled air lookup after area changes; a same-world contextual panel and optional model sample-point callback. Historical event footprints, current station observations and water/soil pollution remain specific connector/data/scientific dependencies. Existing NRSC public-build withholding remains. See `docs/research/area-environment-evidence.md`; no release or external communication is authorized by this slice.
+
 ## Automatic planning — latest product contract
 
 The system proactively discovers/refreshes supported data, generates candidate placements and evaluates scenarios after region/objective selection; repeated manual prompting is not the intended workflow. See docs/PRODUCT_AUTONOMY.md for end-user jobs and automatic/manual ownership, and docs/AGENT_HARNESS.md for local agent roles, durable execution and verification. These extend the scope to R01–R18 and supersede manual-first assumptions below. Architecture is documented; autonomous services and model integrations are not implemented. Development must proactively research prerequisites and judge changes against the final user journey.

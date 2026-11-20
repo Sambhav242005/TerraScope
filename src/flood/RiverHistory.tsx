@@ -36,9 +36,13 @@ export default function RiverHistory({
   onMap,
   onSources,
   renderWorld,
+  onFrame,
+  active = true,
 }: {
   onMap: () => void;
   onSources: () => void;
+  onFrame?: (frame: HistoryFrame) => void;
+  active?: boolean;
   renderWorld?: (frame:HistoryFrame)=>ReactNode;
 }) {
   const [rows, setRows] = useState<Row[]>([]),
@@ -84,6 +88,8 @@ export default function RiverHistory({
       Math.max(1, ...rows.flatMap((r) => (r.flow === null ? [] : [r.flow]))),
     [rows],
   );
+  useEffect(() => { if (current) onFrame?.({ date: current.date, flow: current.flow, rain: current.rain, delta, maximum: max }); }, [current, delta, max, onFrame]);
+  useEffect(() => { if (!active) setPlaying(false); }, [active]);
   const rainMax = useMemo(
     () =>
       Math.max(1, ...rows.flatMap((r) => (r.rain === null ? [] : [r.rain]))),
@@ -153,7 +159,7 @@ export default function RiverHistory({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <main className={renderWorld?"river-history world-mode":"river-history"}>
+    <section aria-label="River history" className={renderWorld?"river-history world-mode":"river-history"}>
       {renderWorld?.({date:selected,flow:current?.flow??null,rain:current?.rain??null,delta,maximum:max})}
       <section className="history-intro">
         <div>
@@ -544,6 +550,6 @@ export default function RiverHistory({
           </footer>
         </>
       )}
-    </main>
+    </section>
   );
 }

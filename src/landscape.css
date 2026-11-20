@@ -1,0 +1,141 @@
+/* Persistent landscape shell. Panels never own or replace the geographic view. */
+.landscape-shell { --dock: 0px; --paper: #fffdf7; position: relative; min-height: 100dvh; background: #e8edde; }
+.landscape-shell.conversation-open { --dock: 350px; }
+.landscape-shell [hidden] { display: none !important; }
+.landscape-shell .topbar { height: 64px; padding: 0 20px; flex-wrap: nowrap; gap: 18px; background: var(--paper); }
+.landscape-shell .brand { padding: 0; font-size: 24px; }
+.header-place { display: flex; align-items: center; gap: 6px; border-left: 1px solid #cbd4c6; padding-left: 16px; max-width: 240px; font-size: 13px; }
+.header-place span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.landscape-title { font-size: 16px; font-weight: 550; margin-right: auto; }
+.landscape-shell .topbar button { min-height: 38px; }
+.save-plan { border: 1px solid #90aa95; border-radius: 9px; padding: 8px 12px; white-space: nowrap; }
+.landscape-shell .workspace { display: block; position: relative; height: calc(100dvh - 110px); min-height: 540px; margin: 0 var(--dock) 0 0; }
+.landscape-shell .map-stage, .landscape-shell .map-view, .landscape-shell .map-host { height: 100%; min-height: 0; }
+.landscape-shell .workspace-commandbar { position: relative; z-index: 25; display: flex; align-items: center; gap: 8px; height: 46px; min-height: 46px; padding: 4px 16px; background: var(--paper); border-bottom: 1px solid #d5ddce; }
+.landscape-shell .placement-disclosure { position: absolute; top: 60px; left: 14px; width: 100px; padding: 6px; border: 1px solid #cbd5c4; border-radius: 12px; background: var(--paper); box-shadow: 0 4px 14px #233d2920; }
+.landscape-shell .placement-disclosure summary { font-size: 11px; padding: 5px; }
+.landscape-shell .placement-bar { display: flex; flex-direction: column; align-items: stretch; gap: 5px; padding: 0; border: 0; background: none; }
+.landscape-shell .placement-btn { min-height: 40px; padding: 7px 3px; font-size: 11px; border-radius: 7px; justify-content: flex-start; }
+.landscape-shell .placement-btn.active { background: #285b40; color: white; }
+.landscape-shell .placement-label, .landscape-shell .placement-summary { display: none; }
+.landscape-shell .search-disclosure { position: relative; }
+.landscape-shell .search-disclosure summary { cursor: pointer; padding: 8px; font-size: 12px; }
+.landscape-shell .search-disclosure .place-search { position: absolute; top: 38px; left: 0; width: min(400px, calc(100vw - 32px)); max-height: 65dvh; overflow: auto; background: var(--paper); padding: 16px; border: 1px solid #cbd5c4; border-radius: 12px; box-shadow: 0 10px 30px #233d2930; }
+.landscape-shell .proposal-controls { margin: 0; }
+.landscape-shell .proposal-controls button, .landscape-shell .proposal-controls summary { min-height: 32px; font-size: 12px; }
+.landscape-actions { position: absolute; z-index: 20; top: 122px; left: 130px; right: calc(var(--dock) + 12px); display: flex; flex-wrap: wrap; gap: 5px; pointer-events: none; }
+.landscape-actions button { pointer-events: auto; background: var(--paper); padding: 8px 10px; min-height: 36px; border: 1px solid #c7d3c2; border-radius: 8px; font-size: 11px; box-shadow: 0 2px 6px #233d2910; }
+.landscape-actions button[aria-expanded=true] { background: #285b40; color: white; }
+.landscape-shell .side-panel { position: absolute; z-index: 24; top: 64px; left: 130px; bottom: 104px; width: min(430px, calc(100% - 150px)); height: auto; min-height: 0; border: 1px solid #c7d3c2; border-radius: 14px; box-shadow: 0 10px 32px #233d2928; background: var(--paper); overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.context-close { position: sticky; z-index: 2; top: 6px; float: right; margin: 6px; border-radius: 50%; background: #e8eee2; min-width: 36px; min-height: 36px; }
+.landscape-shell .panel-top { padding: 16px; }
+.landscape-shell .panel-top h2 { font-size: 23px; }
+.landscape-shell .layer-toggle { top: 76px; left: auto; right: 14px; }
+.landscape-shell .layer-panel { top: 120px; left: auto; right: 14px; max-height: 55dvh; overflow: auto; }
+.landscape-shell .map-summary { position: absolute; top: 124px; right: 14px; width: 190px; padding: 10px; background: var(--paper); border-radius: 8px; font-size: 12px; }
+.landscape-shell .map-summary:not([open]) > :not(summary) { display: none; }
+.landscape-shell .map-summary summary { cursor: pointer; }
+.landscape-shell .map-summary > div { padding-top: 8px; }
+.landscape-shell .map-dock { display: none; }
+.landscape-view-controls { position: absolute; bottom: 108px; left: 14px; display: flex; align-items: center; gap: 4px; max-width: calc(100% - 90px); padding: 5px; background: var(--paper); border-radius: 8px; z-index: 3; font-size: 11px; }
+.landscape-view-controls button { min-height: 34px; min-width: 36px; border-radius: 5px; }
+.landscape-view-controls button[aria-pressed=true] { background: #285b40; color: white; }
+.landscape-view-controls span { padding: 0 6px; }
+.landscape-shell .timeline-panel, .history-map-caption { position: absolute; z-index: 19; left: 130px; right: calc(var(--dock) + 70px); bottom: 35px; height: auto; min-height: 0; padding: 10px 14px; border: 1px solid #c7d3c2; border-radius: 12px; background: var(--paper); box-shadow: 0 5px 24px #233d2920; }
+.landscape-shell .timeline-top { min-height: 40px; gap: 10px; flex-wrap: wrap; }
+.landscape-shell .timeline-title { min-width: 90px; }
+.landscape-shell .timeline-top input[type=range] { flex: 1; min-width: 80px; }
+.timeline-details summary { font-size: 11px; padding-top: 8px; cursor: pointer; }
+.landscape-shell .timeline-charts { height: auto; max-height: 30dvh; overflow: auto; margin-top: 10px; }
+.history-map-caption { display: flex; gap: 12px; align-items: center; font-size: 12px; }
+.history-map-caption button { text-decoration: underline; }
+.conversation-slot .decision-desk { position: absolute; top: 122px; right: 12px; bottom: 14px; width: 326px; z-index: 22; border: 1px solid #c7d3c2; border-radius: 14px; overflow: clip; box-shadow: 0 5px 24px #233d2920; background: var(--paper); }
+.conversation-slot .desk-header { padding: 18px 16px 12px; background: var(--paper); }
+.conversation-slot .desk-header strong { font-size: 20px; letter-spacing: -.5px; }
+.conversation-slot .desk-log { min-height: 140px; }
+.conversation-slot .desk-config, .conversation-slot .desk-drafts { max-height: 24dvh; overflow: auto; }
+.conversation-slot .desk-input-row input { min-width: 0; }
+.landscape-shell .area-data-note { position: relative; z-index: 25; margin: 0; padding: 8px 16px; max-width: 100%; font-size: 11px; }
+.landscape-shell .coordinate-placement, .landscape-shell .placement-blocked { position: relative; z-index: 26; background: var(--paper); }
+.landscape-shell .river-history { padding: 16px; background: var(--paper); }
+.landscape-shell .history-intro { display: block; margin-bottom: 18px; }
+.landscape-shell .history-intro h1 { font-size: 24px; letter-spacing: -.5px; }
+.landscape-shell .history-range { text-align: left; margin-top: 10px; }
+.landscape-shell .pulse-body { display: block; }
+.landscape-shell .pulse-reading { border: 0; padding: 12px; }
+.landscape-shell .replay-top, .landscape-shell .history-controls { flex-wrap: wrap; padding: 12px; }
+.landscape-shell .year-atlas { overflow: auto; }
+.landscape-shell .result-timeline { max-height: 60dvh; overflow: auto; }
+.landscape-shell .basemap-control { top: auto; bottom: 155px; right: 14px; max-width: 210px; }
+.landscape-shell .reset-map { bottom: 76px; }
+.landscape-shell .map-warning { max-width: 300px; }
+@media (max-width: 1100px) {
+ .landscape-title, .header-place, .landscape-shell .guide-top-btn span, .landscape-shell .source-top span { display: none; }
+ .landscape-shell .brand { margin-right: auto; }
+ .landscape-shell.conversation-open { --dock: 310px; }
+ .conversation-slot .decision-desk { width: 290px; }
+ .landscape-shell .timeline-panel { left: 14px; }
+ .landscape-shell .side-panel { left: 118px; width: calc(100% - 130px); }
+}
+@media (max-width: 760px) {
+ .landscape-shell.conversation-open { --dock: 0px; }
+ .landscape-shell .topbar { gap: 7px; padding: 0 10px; height: 56px; }
+ .landscape-shell .brand { font-size: 20px; }
+ .landscape-shell .brand-symbol svg { width: 22px; }
+ .landscape-shell .save-plan { font-size: 0; gap: 0; padding: 8px; }
+ .landscape-shell .workspace-commandbar { height: auto; min-height: 46px; padding: 4px 8px; flex-wrap: wrap; }
+ .landscape-shell .proposal-controls { gap: 6px; flex-wrap: wrap; }
+ .landscape-shell .workspace { height: 76dvh; min-height: 580px; }
+ .landscape-actions { position: relative; top: auto; left: auto; right: auto; padding: 8px; background: var(--paper); }
+ .landscape-shell .placement-disclosure { position: static; width: auto; box-shadow: none; padding: 0; border: 0; }
+ .landscape-shell .placement-bar { flex-direction: row; flex-wrap: wrap; }
+ .landscape-shell .placement-btn { padding: 8px; min-height: 40px; }
+ .landscape-shell .placement-disclosure summary { display: none; }
+ .landscape-shell .search-disclosure { order: 2; }
+ .landscape-shell .side-panel { top: 160px; left: 8px; right: 8px; bottom: 95px; width: auto; }
+ .landscape-shell .layer-toggle { top: 10px; }
+ .landscape-shell .layer-panel { top: 50px; }
+ .landscape-shell .map-summary { top: 56px; }
+ .landscape-shell .timeline-panel, .history-map-caption { position: relative; left: auto; right: auto; bottom: auto; margin: 8px; }
+ .landscape-shell .timeline-charts { display: block; }
+ .landscape-view-controls { bottom: 46px; }
+ .landscape-shell .basemap-control { bottom: 104px; }
+ .landscape-shell .reset-map { bottom: 146px; }
+ .conversation-slot .decision-desk { position: relative; top: auto; right: auto; bottom: auto; width: auto; height: 540px; max-height: 85dvh; margin: 8px; }
+ .landscape-shell button, .landscape-shell summary { min-height: 40px; }
+ .landscape-shell .map-summary summary { min-height: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .landscape-shell *, .landscape-shell *::before, .landscape-shell *::after { scroll-behavior: auto; animation: none; transition: none; } }
+/* Reset legacy tab-layout constraints explicitly at the shell boundary. */
+.landscape-shell .workspace-commandbar { overflow: visible; max-width: 100%; }
+.landscape-shell .workspace-commandbar .placement-disclosure { display: block; }
+.landscape-shell .map-summary { display: block; bottom: auto; height: auto; }
+.landscape-shell .basemap-control { left: auto; transform: none; }
+.visual-comparison { margin: 12px 16px; padding: 14px; border: 1px solid #cfdbc6; border-radius: 10px; }
+.visual-comparison p { font-size: 12px; margin: 8px 0; line-height: 1.5; }
+.visual-comparison > div { display: flex; gap: 8px; }
+.visual-comparison button { padding: 10px; border: 1px solid #91aa96; border-radius: 8px; }
+.visual-comparison button[aria-pressed=true] { background: #285b40; color: white; }
+.landscape-shell .area-review { padding: 16px; }
+@media(max-width:760px) {
+ .landscape-shell .workspace-commandbar .placement-disclosure { width: 100%; flex: 1 1 100%; }
+ .landscape-shell .workspace-commandbar .placement-bar { width: 100%; flex-shrink: 1; flex-wrap: wrap; }
+ .landscape-shell .placement-bar .placement-btn { flex: 1 1 auto; }
+ .landscape-shell .placement-disclosure > summary { display: none; }
+}
+.air-map-key { position: absolute; top: 178px; right: 14px; z-index: 4; background: var(--paper); border-left: 4px solid #8769a6; border-radius: 6px; padding: 8px; max-width: 210px; font-size: 11px; text-align: left; }
+.conversation-slot .desk-header, .conversation-slot .desk-status, .conversation-slot .desk-input-row { flex-shrink: 0; }
+@media(max-width:760px) {
+ .landscape-shell .workspace-commandbar .placement-bar { flex-wrap: nowrap; overflow-x: auto; }
+ .landscape-shell .placement-bar .placement-btn { flex: 0 0 auto; }
+ .landscape-actions { flex-wrap: nowrap; overflow-x: auto; }
+ .landscape-actions button { flex: 0 0 auto; }
+ .conversation-slot .decision-desk { height: 650px; max-height: none; }
+ .conversation-slot .desk-log { min-height: 110px; }
+ .conversation-slot .desk-chips { max-height: 90px; overflow: auto; flex-shrink: 0; }
+ .conversation-slot .desk-config, .conversation-slot .desk-drafts { max-height: 90px; flex-shrink: 0; }
+ .air-map-key { top: 108px; }
+}
+.landscape-shell .map-stage .area-data-note { position: absolute; bottom: 210px; left: 130px; z-index: 5; max-width: min(400px, calc(100% - 150px)); max-height: 180px; overflow: auto; background: var(--paper); border-radius: 8px; border: 1px solid #cbd5c4; padding: 10px; }
+.landscape-shell .reset-map { left: auto; right: 14px; bottom: 114px; }
+@media(max-width:760px) { .landscape-shell .map-stage .area-data-note { left: 8px; max-width: calc(100% - 24px); bottom: 200px; } }

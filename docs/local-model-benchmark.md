@@ -1,3 +1,7 @@
+> 17 November 2026 update: requested **Ollama lfm3:1.7b** is installed and real local inference has now been measured. Both 200-request runs passed the existing tool-call gates. The dedicated loopback run at `http://127.0.0.1:11435` measured 100% valid calls, 488 ms mean / 697 ms p95; first-token latency remains unmeasured. Full hardware/digest/license, retained failures, grounding limits and integration steps: [local AI handoff](../artifacts/chief-local-ai-handoff.md), [action contract](../artifacts/chief-ai-contract.md), [benchmark results](../artifacts/bench-lfm3-loopback-20261117.json). This does not close R02/R12/R17. Historical never-run statements below describe the original runner delivery.
+>
+> Reproduce: `powershell -File scripts/start-local-planning.ps1`, then `node scripts/bench-local-model.mjs --base http://127.0.0.1:11435 --model lfm3:1.7b`. Run `node scripts/smoke-local-planning.mjs` for real evidence plus fixture-ID action checks. No credentials are needed. Public hosted UI access is not enabled; use the local UI on the runtime machine until the exact-origin and browser-permission integration is verified.
+
 # Local-model benchmark — operator guide (R02 / issue #2)
 
 `scripts/bench-local-model.mjs` measures a **locally served, OpenAI-compatible model** (Ollama / llama.cpp / LM Studio on this machine or an authorized LAN host) against TerraScope's tool catalog. It exists to make "R02 is satisfied" a falsifiable claim: a model either meets the pre-registered tool-call gates or it does not.

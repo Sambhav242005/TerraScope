@@ -3,6 +3,26 @@
 > Current status (5 November 2026): [Latest delivery, verification and remaining gaps](docs/CURRENT_STATUS.md) supersedes older implementation-status statements below. Earlier dated notes are retained as history. R08, R10, R15, R16 and R17 delivered 14 November 2026; other requirements remain active.
 
 
+## Area environment additions — 17 November 2026
+
+R01–R18 remain active; R19–R21 add scope. Evidence: `docs/research/area-environment-evidence.md` and `artifacts/chief-environment-handoff.md`.
+
+- [x] R19–R21 bounded slice: typed evidence distinctions; curated regional report search; verified FSI report download; automatic CAMS air-model query; contextual `AreaReviewPanel`; optional sourced model-point callback. Eleven targeted tests pass, including timeout, abort/stale responses, coverage, invalid/null/stale data. No requirement is fully closed.
+- [ ] R19: Obtain lawful site-level corridor/habitat evidence and local forest surveys, safe display generalization and genuine geographical intersection. Forest maps/sightings are not animal routes.
+- [ ] R20: Connect dated event-level historical observed flood footprints with public-display clearance; retain missing-coverage masks. Atlas references are not footprints or modeled susceptibility.
+- [ ] R21: Connect licensed CPCB station observations with current metadata/QC. Resolve commercial API service provisioning before commercial release. Water/soil pollution need separate sampling sources and interpretation; not inferred from air.
+- [ ] R19–R21 integration: mount panel in persistent landscape, wire optional geometry callback, verify browser and physical-phone behavior. Shared build verification must wait for concurrent AI edits to settle; isolated unit evidence does not establish integrated acceptance.
+
+## Visual planning priority — 17 November 2026
+
+Audience clarified by the user: general government staff turning an idea into a visible, explainable geographic plan. Requested local model: Ollama `lfm3:1.7b`; suitability remains unmeasured. Plan first: [visual planning implementation plan](docs/VISUAL_PLANNING_PLAN.md). All R01-R18 remain active; the steps below sequence existing scope and do not claim delivery.
+
+- [ ] R02/R12/R17: Benchmark the requested real local model and verify the hosted/local UI connection path; use bounded, independently checked tool operations.
+- [ ] R01/R10/R13: Consolidate the persistent map, conversation, contextual controls and timeline; verify a visual journey without work-tab navigation.
+- [ ] R02/R03/R06/R11/R12/R15/R16/R17: Connect intent and retrieval to automatic candidates, reversible visible edits, evidence highlighting and durable jobs.
+- [ ] R03/R04/R05/R07/R08/R09/R10/R11/R13: Connect supported effects through versioned model contracts and validation; show honest visual comparisons and specific unavailable-input states.
+- [ ] R14/R18: Verify the complete government-user task, accessibility, real-device limitations and release package; record requirement evidence before any subsequent release.
+
 ## Active execution order — supersedes earlier review-first tasks
 
 - [x] Four bounded fix slices - 15 November 2026 (issue-linked, unit-verified, browser where a surface exists): (1) R06 slice (a) - drag-to-move re-admission + append-only edit audit (src/flood/intervention.ts; handleMoveIntervention with admission before persistence + handleNudgeIntervention keyboard/touch; 11 tests; maplibre pins draggable) - pointer-drag in a real browser still unproven; (2) R02 - fixture-tested benchmark runner for local models (scripts/bench-local-model.mjs; 44 tests; pre-registered gates 90% tool-call-valid / 5% parse-fail / 2% unknown-tool; redaction tests; never ran against a real model); (3) R03 - DEM-error capacity range for candidates (src/flood/storage/capacityRange.ts; 16 tests; browser-verified line in candidate detail); (4) R07 - ERA5 solar/wind baseline (public/data/renewable-resource-gandak.json, sha256-pinned; GHI P10/P50/P90 11.45/17.45/25.01 MJ/m2/day; wind 100 m 2.13/4.10/6.80 m/s; dominant bearing 340.8 deg; library + 21 fixture tests; manifest/registry/sources card wired). Suite now 277/277; decision-desk 16; build passes. NOT closed: #2/#12 (no local model), #3 (no outlet/bathymetry), #6 (pointer-drag browser acceptance outstanding), #7 (no simulation).

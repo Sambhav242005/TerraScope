@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Map,
   Layers,
@@ -36,8 +36,10 @@ import {
   HelpCircle,
   History,
 } from "lucide-react";
+import { AreaReviewPanel } from "./flood/areaReview/AreaReviewPanel";
+import { emptyGeometry, type AreaEvidenceCollection } from "./flood/areaReview/contracts";
 import MapView from "./flood/MapView";
-import RiverHistory from "./flood/RiverHistory";
+import RiverHistory, { type HistoryFrame } from "./flood/RiverHistory";
 import ResultTimeline from "./flood/ResultTimeline";
 import EnsoContext from "./flood/EnsoContext";
 import Findings from "./flood/Findings";
@@ -62,7 +64,6 @@ import {
   ONBOARDING_LIMITS,
   type OnboardingReport,
 } from "./flood/dataOnboarding";
-import WorldMap from "./flood/WorldMap";
 import { CandidateProfileChart } from "./flood/storage/CandidateProfileChart";
 import {
   parseAssets,
@@ -102,7 +103,6 @@ import {
   validatePlacementEdit,
   summarizeInterventions,
 } from "./flood/intervention";
-import { getEnsoContextForYear, getEnsoColor } from "./flood/enso";
 import PlaceSearch, {type MapTarget} from "./flood/PlaceSearch";
 import {assessPlacement, type PlacementAttempt} from "./flood/placementAdmission";
 import {summarizeAttempt} from "./flood/placementFeedback";
@@ -111,8 +111,10 @@ import type {PlacementEvidence} from "./flood/placementCheck";
 import PlacementReview from "./flood/PlacementReview";
 import { usePlacementChecks } from "./flood/usePlacementChecks";
 import "./style.css";
-type Tab =
-  | "3D explorer"
+import "./landscape.css";
+type WorkspacePanel =
+  | null
+  | "Environment"
   | "River history"
   | "Explore"
   | "Compare"
@@ -335,7 +337,7 @@ const waterNote = (w: StoredCandidate["waterEvidence"]) =>
       : "Water evidence unavailable";
 export default function App() {
   const [saved, setSaved] = useState(load),
-    [tab, setTab] = useState<Tab>("3D explorer"),
+    [panel, setPanel] = useState<WorkspacePanel>(null),
     [rain, setRain] = useState<Rain | null>(null),
     [flow, setFlow] = useState<Flow | null>(null),
     [osm, setOsm] = useState<Asset[]>([]),
@@ -388,6 +390,16 @@ export default function App() {
     [coordinatePlacement, setCoordinatePlacement] = useState(false),
     [placementLat, setPlacementLat] = useState("25.71"),
     [placementLon, setPlacementLon] = useState("85.16");
+  const [areaGeometry, setAreaGeometry] = useState<AreaEvidenceCollection>(emptyGeometry);
+  const [historyFrame, setHistoryFrame] = useState<HistoryFrame | null>(null);
+  const [historyMode, setHistoryMode] = useState(false);
+  const panelTrigger = useRef<HTMLButtonElement | null>(null);
+  const closePanel = () => { setPanel(null); panelTrigger.current?.focus(); };
+  const openPanel = (next: WorkspacePanel, trigger?: HTMLButtonElement) => {
+    if (trigger) panelTrigger.current = trigger;
+    setPanel(current => current === next ? null : next);
+    if (next === "River history") { setHistoryMode(true); setPlaying(false); }
+  };
   const proposalItems = useMemo(() => saved.interventions ?? [], [saved.interventions]);
   const [mapTarget, setMapTarget] = useState<MapTarget | null>(()=>saved.mapTarget??null);
   const [placementError, setPlacementError] = useState("");
@@ -403,10 +415,11 @@ export default function App() {
     [storagePhase, setStoragePhase] = useState(""),
     [showCandidates, setShowCandidates] = useState(true),
     [showWaterLayer, setShowWaterLayer] = useState(true),
-    [showDecisionDesk, setShowDecisionDesk] = useState(false),
+    [showDecisionDesk, setShowDecisionDesk] = useState(true),
     [showBasins, setShowBasins] = useState(false),
     [basins, setBasins] = useState<BasinBundle | null>(null),
     [selectedStorage, setSelectedStorage] = useState<string | null>(null);
+  const closeDecisionDesk = useCallback(() => setShowDecisionDesk(false), []);
   const storageAbort = useRef<AbortController | null>(null),
     lastStorageRun = useRef<{ hash: string; lat: number; lon: number } | null>(
       null,
@@ -607,7 +620,7 @@ export default function App() {
         };
         if (!saveStorageRun(run))
           setNotice(
-            "Storage analysis could not be saved on this device. Results will be lost when the tab closes.",
+            "Storage analysis could not be saved on this device. Results will be lost when the panel closes.",
           );
       })
       .catch((err) => {
@@ -838,8 +851,8 @@ export default function App() {
       null,
     [saved.interventions, selectedIntervention],
   );
-  const enso = useMemo(() => getEnsoContextForYear(2024), []);
-  const ensoColor = useMemo(() => getEnsoColor(enso.phase), [enso.phase]);
+
+
 
   function dismissPlacementAttempt() {
     pendingPlacement.current = null;
@@ -1183,43 +1196,24 @@ export default function App() {
     );
   };
   return (
-    <div className="app-shell">
+    <div className={`app-shell landscape-shell ${showDecisionDesk ? "conversation-open" : ""}`}>
       <header className="topbar">
         <a
           href="#"
           className="brand"
           onClick={(e) => {
             e.preventDefault();
-            setTab("3D explorer");
+            setPanel(null);
           }}
         >
           <span className="brand-symbol">
             <Mountain size={29} />
           </span>
           TerraScope
-          <span className="brand-sub">Flood preparedness workspace</span>
+
         </a>
-        <nav aria-label="Workspace">
-          {(
-            [
-              { name: "3D explorer", icon: Mountain },
-              { name: "River history", icon: Waves },
-              { name: "Explore", icon: Map },
-              { name: "Compare", icon: GitCompareArrows },
-              { name: "Field checks", icon: ClipboardCheck },
-              { name: "Response plan", icon: FileText },
-            ] as const
-          ).map(({ name, icon: Icon }) => (
-            <button
-              key={name}
-              aria-current={tab === name ? "page" : undefined}
-              onClick={() => setTab(name)}
-            >
-              <Icon size={17} />
-              <span>{name}</span>
-            </button>
-          ))}
-        </nav>
+        <div className="header-place"><MapPin size={16} /><span>{mapTarget?.label ?? "Sonpur area"}</span></div>
+        <h1 className="landscape-title">Plan with the landscape</h1>
         <button
           className="guide-top-btn"
           aria-label="What am I looking at? Guide"
@@ -1246,56 +1240,7 @@ export default function App() {
           <MessagesSquare size={16} />
           <span>Ask the map</span>
         </button>
-        <div className="casebar">
-        <div>
-          <span className="live-dot" />
-          <strong>Gandak river corridor</strong>
-          <span className="case-location">Bihar, India</span>
-        </div>
-        <button
-          type="button"
-          className="enso-badge"
-          title={`${enso.notes} — open the dated ENSO climate context`}
-          aria-haspopup="dialog"
-          aria-expanded={showEnso}
-          onClick={() => {
-            setSources(false);
-            setShowTable(false);
-            setShowGuide(false);
-            setShowEnso((v) => !v);
-          }}
-        >
-          <span className="enso-dot" style={{ backgroundColor: ensoColor }} />
-          <strong>ENSO: {enso.phase} ({enso.year})</strong>
-          <span className="enso-sub">
-            ONI: {enso.oniAnomalyC > 0 ? `+${enso.oniAnomalyC}` : enso.oniAnomalyC}°C
-          </span>
-        </button>
-        <div>
-          <span className="mode-pill">Historical data replay</span>
-          <span className="case-date">
-            {(tab === "River history" || tab === "3D explorer")
-              ? "2015 — 2024 · daily history"
-              : "25 Sep — 03 Oct 2024 · event detail"}
-          </span>
-          <button
-            aria-label="Export workspace"
-            title="Export workspace"
-            onClick={() =>
-              download(
-                JSON.stringify(
-                  { exportedAt: new Date().toISOString(), ...saved, manifest },
-                  null,
-                  2,
-                ),
-                "terrascope-workspace.json",
-              )
-            }
-          >
-            <Download size={16} />
-          </button>
-        </div>
-        </div>
+        <button className="save-plan" onClick={() => download(JSON.stringify({ exportedAt: new Date().toISOString(), ...saved, manifest }, null, 2), "terrascope-workspace.json")}><Download size={16} />Save plan</button>
       </header>
       <div className="workspace-commandbar">
       <details className="workspace-disclosure placement-disclosure" open><summary>Placement tools</summary>
@@ -1406,7 +1351,7 @@ export default function App() {
         </details>
       </div>
       </div>
-      {mapTarget && <div className="area-data-note" role="status"><strong>{mapTarget.label}</strong> / {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks…' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall and discharge series remain the original Sonpur case and do not describe this selected area. NRSC dated map-color snapshots are used only where their published bounds cover the footprint. Terrain screening runs for the selected centre; suitability remains unverified.</div>}
+
       {placementError && (() => {
         const attempt = placementAttempt;
         const { kindLabels, names } = summarizeAttempt(attempt?.check);
@@ -1441,78 +1386,32 @@ export default function App() {
         <label>Longitude<input aria-label="Placement longitude" type="number" min="-180" max="180" step="any" required value={placementLon} onChange={e => setPlacementLon(e.target.value)}/></label>
         <button type="submit" disabled={!activePlacementTool || activePlacementTool === 'select'}>Place and check proposal</button>
       </form>}
-      {inspectedIntervention && (tab === '3D explorer' || tab === 'River history') && <aside className="world-placement-review">
-        <PlacementReview item={inspectedIntervention} check={placementReview.checks[inspectedIntervention.id] ?? null} evidence={placementReview.evidence} state={placementReview.state} retry={placementReview.retry} close={() => setSelectedIntervention(null)} remove={() => handleDeleteIntervention(inspectedIntervention.id)}/>
-      </aside>}
-      {tab === "3D explorer" && (
-        <RiverHistory
-          onMap={() => setTab("Explore")}
-          onSources={() => setSources(true)}
-          renderWorld={(frame) => (
-            <WorldMap
-              frame={frame}
-              onSelectArea={p=>chooseArea({...p,label:"Map-selected area"})}
-              focusArea={mapTarget}
-              focusPoint={cameraPoint}
-              assets={assets}
-              onSelect={(id) => {
-                choose(id);
-                setTab("Explore");
-              }}
-              onHistory={() => setTab("River history")}
-              onSources={() => setSources(true)}
-              storage={storageMapData}
-              selectedStorage={selectedStorage}
-              onSelectStorage={setSelectedStorage}
-              discharge={flow?.daily.river_discharge[day] ?? null}
-              dischargeMax={flowMax}
-              dateLabel={`${date(days[day])} 2024`}
-              showCandidates={showCandidates}
-              showWaterLayer={showWaterLayer}
-              showBasins={showBasins}
-              basins={basinFC}
-              interventions={saved.interventions}
-              selectedIntervention={selectedIntervention}
-              onSelectIntervention={setSelectedIntervention}
-              activePlacementTool={activePlacementTool}
-              onPlaceAt={handlePlaceAt}
-              onMoveIntervention={handleMoveIntervention}
-              showInterventions={showInterventions}
-              placementChecks={placementReview.checks}
-              placementAttempt={placementAttempt}
-              placementEvidence={placementReview.evidence}
-              onDismissPlacementAttempt={dismissPlacementAttempt}
-            />
-          )}
-        />
-      )}
-      {tab === "River history" && (
-        <RiverHistory
-          onMap={() => setTab("Explore")}
-          onSources={() => setSources(true)}
-        />
-      )}
-      <main
-        className="workspace"
-        style={
-          tab === "River history" || tab === "3D explorer"
-            ? { display: "none" }
-            : undefined
-        }
-      >
+      <nav className="landscape-actions" aria-label="Map context">
+        {([
+          ["Explore", "Candidates & resources", Map],
+          ["Environment", "Environment", Trees],
+          ["River history", "History", History],
+          ["Compare", "Compare", GitCompareArrows],
+          ["Field checks", "Field checks", ClipboardCheck],
+          ["Response plan", "Draft plan", FileText],
+        ] as const).map(([name, label, Icon]) => <button key={name} aria-expanded={panel === name} aria-controls="landscape-context" onClick={e => openPanel(name, e.currentTarget)}><Icon size={16} />{label}</button>)}
+        <button onClick={() => setShowEnso(true)}><Waves size={16} />Climate context</button>
+      </nav>
+      <main className="workspace">
         <section className="map-stage" aria-label="Geographic workspace">
-          {tab !== "3D explorer" && tab !== "River history" && (
             <MapView
+              areaEvidence={areaGeometry}
+              onEvidenceSelect={() => setPanel("Environment")}
               focusArea={mapTarget}
               focusPoint={cameraPoint}
               waterLevel={waterOn ? waterLevel : null}
-              replayDate={days[day]}
-              discharge={flow?.daily.river_discharge[day] ?? null}
-              dischargeMax={flowMax}
-              dateLabel={`${date(days[day])} 2024`}
+              replayDate={historyMode && historyFrame ? historyFrame.date : days[day]}
+              discharge={historyMode ? historyFrame?.flow ?? null : flow?.daily.river_discharge[day] ?? null}
+              dischargeMax={historyMode ? historyFrame?.maximum ?? flowMax : flowMax}
+              dateLabel={historyMode && historyFrame ? historyFrame.date : `${date(days[day])} 2024`}
               assets={assets}
               selected={selected}
-              onSelect={choose}
+              onSelect={(id) => { choose(id); setPanel("Explore"); }}
               onArea={(p) => {
                 chooseArea({...p,label:"Map-selected area"});
                 setSelected(null);
@@ -1522,14 +1421,14 @@ export default function App() {
               terrain={terrain}
               storage={storageMapData}
               selectedStorage={selectedStorage}
-              onSelectStorage={setSelectedStorage}
+              onSelectStorage={(id) => { setSelectedStorage(id); setPanel("Explore"); }}
               showCandidates={showCandidates}
               showWaterLayer={showWaterLayer}
               showBasins={showBasins}
               basins={basinFC}
               interventions={saved.interventions}
               selectedIntervention={selectedIntervention}
-              onSelectIntervention={setSelectedIntervention}
+              onSelectIntervention={(id) => { setSelectedIntervention(id); setPanel("Explore"); }}
               activePlacementTool={activePlacementTool}
               onPlaceAt={handlePlaceAt}
               onMoveIntervention={handleMoveIntervention}
@@ -1539,7 +1438,9 @@ export default function App() {
               placementEvidence={placementReview.evidence}
               onDismissPlacementAttempt={dismissPlacementAttempt}
             />
-          )}
+          {areaGeometry.features.length > 0 && <button className="air-map-key" onClick={() => setPanel("Environment")}>Purple point: current air model / ~45 km, not a monitor</button>}
+      {mapTarget && <details className="area-data-note"><summary>{mapTarget.label} / Sonpur history stays at its source location</summary> {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks…' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall and discharge series remain the original Sonpur case and do not describe this selected area. NRSC dated map-color snapshots are used only where their published bounds cover the footprint. Terrain screening runs for the selected centre; suitability remains unverified.</details>}
+          <div className="landscape-view-controls" aria-label="Map perspective"><button aria-pressed={!terrain} onClick={() => setTerrain(false)}>2D</button><button aria-pressed={terrain} onClick={() => setTerrain(true)}>3D</button><span>Real map / proposals are not measured effects</span></div>
           <button
             className="layer-toggle"
             onClick={() => setLayers(!layers)}
@@ -1624,7 +1525,7 @@ export default function App() {
               </button>
             </div>
           )}
-          <div className="map-summary">
+          <details className="map-summary"><summary>Event measurements</summary>
             <div className="summary-date">
               <strong>Day {day + 1}</strong>
               <span>
@@ -1634,7 +1535,7 @@ export default function App() {
             <div title="ERA5 sample grid cell · daily total">
               <CloudRain size={14} />
               <span>
-                Rain
+                Sonpur event rain
                 <strong>
                   {fmt(dailyRain[day])}
                   <small> mm/d</small>
@@ -1644,14 +1545,14 @@ export default function App() {
             <div title="GloFAS modeled discharge at the sample river cell">
               <Waves size={14} />
               <span>
-                Flow
+                Sonpur event flow
                 <strong>
                   {fmt(flow?.daily.river_discharge[day])}
                   <small> m³/s</small>
                 </strong>
               </span>
             </div>
-          </div>
+          </details>
           <div className="map-dock">
             <MapPin size={16} />
             <span>Click to move the resource-search centre</span>
@@ -1661,38 +1562,46 @@ export default function App() {
             </button>
           </div>
         </section>
-        <aside className="side-panel">
+        <aside className="side-panel" id="landscape-context" hidden={panel === null} aria-label="Map context panel" onKeyDown={e => { if (e.key === "Escape") closePanel(); }}>
+          <button className="context-close" onClick={closePanel} aria-label="Close context panel"><X size={18} /></button>
+          <div hidden={panel !== "River history"}>
+            <RiverHistory onMap={closePanel} onSources={() => setSources(true)} onFrame={setHistoryFrame} active={panel === "River history"} />
+          </div>
+          <div hidden={panel !== "Environment"}><AreaReviewPanel latitude={saved.area.lat} longitude={saved.area.lon} onGeometryChange={setAreaGeometry} /></div>
+          <div hidden={panel === "River history" || panel === "Environment"}>
           <div className="panel-top">
             <span className="eyebrow">
-              {tab === "Explore"
+              {panel === "Explore"
                 ? "PLACE → EVIDENCE → ACTION"
-                : tab === "Compare"
+                : panel === "Compare"
                   ? "EXPLORE THE ASSUMPTIONS"
-                  : tab === "Field checks"
+                  : panel === "Field checks"
                     ? "GROUND THE DATA"
                     : "PREPARE WITH CONTEXT"}
             </span>
             <h2>
-              {tab === "Explore"
-                ? "Resources to review"
-                : tab === "Compare"
+              {panel === "Explore"
+                ? "Candidates & resources"
+                : panel === "Compare"
                   ? "Compare scenarios"
-                  : tab === "Field checks"
+                  : panel === "Field checks"
                     ? "Field verification"
                     : "Preparedness draft"}
             </h2>
             <p>
-              {tab === "Explore"
-                ? "Start with the places that matter. Verify their condition before planning action."
-                : tab === "Compare"
+              {panel === "Explore"
+                ? "Explore terrain candidates and mapped resources. Site suitability remains unverified."
+                : panel === "Compare"
                   ? "A transparent runoff experiment. Change assumptions and inspect their effect."
-                  : tab === "Field checks"
+                  : panel === "Field checks"
                     ? "Record local observations and keep uncertainty visible."
                     : "Turn the available evidence into a reviewable preparation checklist."}
             </p>
           </div>
-          {tab === "Explore" && <Findings historyRows={historyRows} manifest={manifest} storageRun={storageRun} proposalCount={(saved.interventions ?? []).length} replayDate={days[day]} ensoYear={2024} onOpenEnso={() => { setSources(false); setShowTable(false); setShowGuide(false); setShowEnso(true); }} />}
-          <section className="storage-panel" aria-label="Natural water-storage screening">
+          {panel === "Compare" && <section className="visual-comparison" aria-label="Proposal visibility comparison"><h3>See the proposal</h3><p>Switch geometry in place, with the same camera and date. No calculated flood benefit.</p><div><button aria-pressed={!showInterventions} onClick={() => setShowInterventions(false)}>Existing place</button><button aria-pressed={showInterventions} onClick={() => setShowInterventions(true)}>With proposals ({proposalItems.length})</button></div></section>}
+          {panel === "Explore" && <button className="secondary" onClick={() => setAdding(!adding)}><Plus size={15} />Add resource</button>}
+          {panel === "Explore" && <Findings historyRows={historyRows} manifest={manifest} storageRun={storageRun} proposalCount={(saved.interventions ?? []).length} replayDate={days[day]} ensoYear={2024} onOpenEnso={() => { setSources(false); setShowTable(false); setShowGuide(false); setShowEnso(true); }} />}
+          <section className="storage-panel" aria-label="Natural water-storage screening" hidden={panel !== "Explore"}>
             <div className="storage-head">
               <Droplets size={16} />
               <h3>Natural water-storage candidates</h3>
@@ -2023,7 +1932,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {tab === "Explore" && (
+          {panel === "Explore" && (
             <section className="ai-planner-card" aria-label="Screening and proposals">
               <h3>Screening and proposals</h3>
               <p>{storageBusy ? `Screening in progress: ${storagePhase}. Results are not ready.` : storageRun?.status === 'succeeded' ? `${storageRun.candidateCountTotal} DEM depressions screened; suitability unassessed.` : 'Terrain results unavailable. Missing evidence is not zero storage.'}</p>
@@ -2055,7 +1964,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {(tab === "Explore" || tab === "Field checks") && (
+          {(panel === "Explore" || panel === "Field checks") && (
             <>
               <div className="radius-control">
                 <label htmlFor="radius">
@@ -2231,7 +2140,7 @@ export default function App() {
                   <button
                     className="text-action"
                     onClick={() => {
-                      setTab("Response plan");
+                      setPanel("Response plan");
                       setDraft(draftPlan(nearby, saved.checks, saved.radius));
                     }}
                   >
@@ -2242,7 +2151,7 @@ export default function App() {
               </div>
             </>
           )}
-          {tab === "Compare" && (
+          {panel === "Compare" && (
             <div className="compare-panel">
               <p className="placement-model-note">Parameter experiment only. Placed interventions are not model inputs. An intervention-effect comparison is unavailable until catchment, outlet and other required model adapters are connected. Rainfall is identical in both runs.</p>
               <div className="notice-card">
@@ -2401,7 +2310,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {tab === "Response plan" && (
+          {panel === "Response plan" && (
             <div className="plan-panel">
               <span className="review-badge">Human review required</span>
               <p className="small-copy">
@@ -2473,12 +2382,14 @@ export default function App() {
               <ArrowUpRight size={12} />
             </button>
           </footer>
+          </div>
         </aside>
       </main>
+      {historyMode && <div className="history-map-caption"><span>Sonpur historical reconstruction / {historyFrame?.date ?? "Loading"} / not flood extent</span><button onClick={() => {setHistoryMode(false); setPanel(null);}}>Return to event replay</button></div>}
       <section
         className="timeline-panel"
         aria-label="Historical timeline"
-        style={tab === "River history" || tab === "3D explorer" ? { display: "none" } : undefined}
+        hidden={historyMode}
       >
         <div className="timeline-top">
           <button
@@ -2524,7 +2435,7 @@ export default function App() {
             <ArrowUpRight size={14} />
           </button>
         </div>
-        <div className="timeline-charts">
+        <details className="timeline-details"><summary>Measurements & terrain-only water scenario</summary><div className="timeline-charts">
           <div>
             <div className="chart-heading">
               <span>
@@ -2582,9 +2493,9 @@ export default function App() {
               <ChevronRight size={13} />
             </button>
           </div>
-        </div>
+        </div></details>
       </section>
-      {tab !== "River history" && tab !== "3D explorer" && (
+      {(
         <ResultTimeline
           days={days}
           dailyRain={dailyRain}
@@ -2593,7 +2504,7 @@ export default function App() {
           waterLevel={waterLevel}
           storageRun={storageRun}
           interventions={saved.interventions ?? []}
-          onOpenHistory={() => setTab("River history")}
+          onOpenHistory={() => openPanel("River history")}
           onClose={() => setShowResults(false)}
           open={showResults}
           onOpen={() => setShowResults(true)}
@@ -2924,7 +2835,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {showDecisionDesk && (
+      <div className="conversation-slot" hidden={!showDecisionDesk}>
         <DecisionDesk
           context={{
             history: historyRows,
@@ -2932,11 +2843,11 @@ export default function App() {
             ensoYear: 2024,
             storageRun,
             proposalCount: (saved.interventions ?? []).length,
-            replayDate: days[day],
+            replayDate: historyMode && historyFrame ? historyFrame.date : days[day],
           }}
-          onClose={() => setShowDecisionDesk(false)}
+          onClose={closeDecisionDesk}
         />
-      )}
+      </div>
     </div>
   );
 }

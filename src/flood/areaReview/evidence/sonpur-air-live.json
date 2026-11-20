@@ -1,0 +1,145 @@
+{
+  "latitude": 25.7,
+  "longitude": 85.18,
+  "reports": [
+    {
+      "retrievedAt": "2026-11-17",
+      "issuedAt": null,
+      "bounds": [
+        83.3,
+        24.2,
+        88.3,
+        27.6
+      ],
+      "boundsMeaning": "Approximate Bihar discovery envelope; not confirmed point coverage or a boundary.",
+      "status": "report-only",
+      "units": "Report reference; no local measurement",
+      "license": "Link/reference only; no report imagery or geometry redistributed.",
+      "missingCoverage": "No site-level geometry ingested.",
+      "uncertainty": "Regional context does not establish conditions at the selected point.",
+      "id": "fsi-isfr-2023",
+      "kind": "forest-survey-report",
+      "title": "Bihar forest survey · ISFR 2023",
+      "provider": "Forest Survey of India",
+      "version": "ISFR 2023 Volume II",
+      "validTime": "2023 assessment",
+      "sourceUrl": "https://fsi.nic.in/uploads/isfr2023/isfr_book_eng-vol-2_2023.pdf",
+      "resolution": "State/district report; no site-level forest layer connected",
+      "summary": "Official forest-cover assessment for regional context. Forest cover is not evidence of animal movement or a surveyed route."
+    },
+    {
+      "retrievedAt": "2026-11-17",
+      "issuedAt": null,
+      "bounds": [
+        83.3,
+        24.2,
+        88.3,
+        27.6
+      ],
+      "boundsMeaning": "Approximate Bihar discovery envelope; not confirmed point coverage or a boundary.",
+      "status": "report-only",
+      "units": "Report reference; no local measurement",
+      "license": "Link/reference only; no report imagery or geometry redistributed.",
+      "missingCoverage": "No verified selected-site corridor, habitat or sightings layer. Missing records do not mean no route exists.",
+      "uncertainty": "Regional context does not establish conditions at the selected point.",
+      "id": "moef-corridors-2023",
+      "kind": "documented-corridor",
+      "title": "Bihar corridor report · 2023",
+      "provider": "Project Elephant / MoEFCC, state forest departments; WII technical support",
+      "version": "Edition 1/2023",
+      "validTime": "2023 report",
+      "sourceUrl": "https://moef.gov.in/uploads/2023/11/PE-Elephant-Corridor-of-India-2023.pdf",
+      "resolution": "Regional report; indicative mapping, not delineated boundaries",
+      "summary": "The report documents Jamui–Jhajha–Chakayi in Bihar, not a Sonpur route. No wildlife tracking points or route geometry are displayed."
+    },
+    {
+      "retrievedAt": "2026-11-17",
+      "issuedAt": null,
+      "bounds": [
+        83.3,
+        24.2,
+        88.3,
+        27.6
+      ],
+      "boundsMeaning": "Approximate Bihar discovery envelope; not confirmed point coverage or a boundary.",
+      "status": "report-only",
+      "units": "Report reference; no local measurement",
+      "license": "Link/reference only; no report imagery or geometry redistributed.",
+      "missingCoverage": "Event-level footprint connector and public-display clearance remain missing. Existing NRSC rasters stay withheld.",
+      "uncertainty": "Regional context does not establish conditions at the selected point.",
+      "id": "nrsc-bihar-history",
+      "kind": "historical-flood-atlas",
+      "title": "Bihar historical flood atlas · 1998–2010",
+      "provider": "NRSC / ISRO",
+      "version": "Bihar flood hazard zonation atlas, historical satellite archive",
+      "validTime": "1998–2010 source observations",
+      "sourceUrl": "https://www.nrsc.gov.in/nrscnew/resources_atlas_FloodHazard_Zonation.php?lang_code=en",
+      "resolution": "District atlas reference; no event footprint resolution ingested",
+      "summary": "Regional atlas compiled from historical satellite flood observations. It is not a dated footprint at this point, a present forecast, or a hydraulic simulation."
+    },
+    {
+      "retrievedAt": "2026-11-17",
+      "issuedAt": null,
+      "bounds": [
+        83.3,
+        24.2,
+        88.3,
+        27.6
+      ],
+      "boundsMeaning": "Approximate Bihar discovery envelope; not confirmed point coverage or a boundary.",
+      "status": "report-only",
+      "units": "Report reference; no local measurement",
+      "license": "Link/reference only; no report imagery or geometry redistributed.",
+      "missingCoverage": "Current station availability, coordinates, quality flags and licensed observation connector are unverified.",
+      "uncertainty": "Regional context does not establish conditions at the selected point.",
+      "id": "cpcb-stations",
+      "kind": "air-monitor-observation",
+      "title": "Nearby regional monitoring references · CPCB",
+      "provider": "Central Pollution Control Board",
+      "version": "Station list dated 2021-02-02",
+      "validTime": "2021-02-02 station inventory; not current readings",
+      "sourceUrl": "https://cpcb.nic.in/uploads/it_technical_activity.pdf",
+      "resolution": "Named stations only; no observation footprint",
+      "summary": "The dated official inventory lists Industrial Area, Hajipur and stations in Patna. No current monitor readings are connected here."
+    }
+  ],
+  "gaps": [
+    "No verified local wildlife route, habitat or sightings layer. No records is not evidence of absence.",
+    "Historical observed flood footprints and modeled flood susceptibility are not connected for this selection.",
+    "Air monitor observations are not connected. Air model estimates below are not CPCB observations or Indian AQI.",
+    "Water and soil pollution require separate sampling datasets, licensed connectors and interpretation methods; air data cannot establish either."
+  ],
+  "air": {
+    "id": "cams-global-air",
+    "kind": "modeled-pollution",
+    "title": "Air model near this area",
+    "summary": "CAMS global model sample; not a local monitor. US AQI is not Indian National AQI.",
+    "provider": "CAMS global atmospheric composition forecasts via Open-Meteo",
+    "version": "CAMS global; upstream run ID not supplied",
+    "sourceUrl": "https://open-meteo.com/en/docs/air-quality-api",
+    "queryUrl": "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=25.7&longitude=85.18&hourly=pm2_5%2Cus_aqi&domains=cams_global&timezone=GMT&forecast_days=1",
+    "retrievedAt": "2026-11-17T16:40:03.735Z",
+    "issuedAt": null,
+    "validTime": "2026-11-17T16:00:00.000Z",
+    "bounds": [
+      85.20001,
+      25.700005,
+      85.20001,
+      25.700005
+    ],
+    "boundsMeaning": "Returned model sample point only; no cell boundary inferred",
+    "resolution": "0.4° (~45 km) model; 3-hourly source interpolated by provider to hourly output",
+    "units": "PM2.5: μg/m³; AQI: US AQI (dimensionless)",
+    "license": "CC BY 4.0 data; attribute CAMS and Open-Meteo. Free API is non-commercial with rate limits.",
+    "uncertainty": "Coarse model estimate; local variation unresolved. Forecast issue time/run identifier unavailable; not usable as an issue-time hindcast.",
+    "missingCoverage": "No station observations, local validation or water/soil pollution data.",
+    "status": "available",
+    "pm25": 139.7,
+    "usAqi": 177,
+    "sample": [
+      85.20001,
+      25.700005
+    ]
+  },
+  "airError": null
+}

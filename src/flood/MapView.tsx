@@ -10,6 +10,7 @@ import type { PlacementAttempt } from "./placementAdmission";
 import { summarizeAttempt } from "./placementFeedback";
 import { type Asset } from "./model";
 import { type Intervention, type PlacementTool } from "./intervention";
+import type { AreaEvidenceCollection } from "./areaReview/contracts";
 import type { BasinFeatureCollection } from "./hydrobasins";
 
 type FeatureCollectionShim = {
@@ -43,6 +44,8 @@ function polygonCenterOf(feature: Record<string, unknown>): [number, number] | n
 }
 
 export default function MapView({
+  areaEvidence,
+  onEvidenceSelect,
   focusArea,
   focusPoint,
   waterLevel = null,
@@ -77,6 +80,8 @@ export default function MapView({
   placementEvidence=null,
   onDismissPlacementAttempt,
 }: {
+  areaEvidence?: AreaEvidenceCollection;
+  onEvidenceSelect?: () => void;
   assets: Asset[];
   focusArea?:{lat:number;lon:number;label:string}|null;
   focusPoint?:{lat:number;lon:number}|null;
@@ -124,6 +129,8 @@ export default function MapView({
     [satellite, setSatellite] = useState(false),
     [nrscSnapshot, setNrscSnapshot] = useState(""),
     autoNrsc = useRef("");
+  const evidenceCallback = useRef(onEvidenceSelect);
+  evidenceCallback.current = onEvidenceSelect;
   const renewableLayer = useRef<RenewableLayer | null>(null);
   const riverGauge = useRef<{ marker: maplibregl.Marker; el: HTMLDivElement } | null>(null);
   const callbacks = useRef({ onArea, onSelect });
@@ -239,6 +246,7 @@ export default function MapView({
       if (target.closest(".resource-pin") || target.closest(".intervention-pin")) {
         return;
       }
+      if (m.getLayer("area-evidence-point") && m.queryRenderedFeatures(e.point, {layers: ["area-evidence-point"]}).length) { evidenceCallback.current?.(); return; }
       if (latest.current.activePlacementTool && latest.current.activePlacementTool !== "select") {
         latest.current.onPlaceAt?.({ lat: e.lngLat.lat, lon: e.lngLat.lng });
         return;
@@ -272,6 +280,19 @@ export default function MapView({
       map.current = null;
     };
   }, []);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const update = () => {
+      const data = areaEvidence ?? { type: "FeatureCollection" as const, features: [] };
+      const source = m.getSource("area-evidence") as maplibregl.GeoJSONSource | undefined;
+      if (source) source.setData(data);
+      else { m.addSource("area-evidence", {type: "geojson", data}); m.addLayer({id: "area-evidence-point", type: "circle", source: "area-evidence", paint: {"circle-radius": 9, "circle-color": "#8769a6", "circle-stroke-width": 3, "circle-stroke-color": "#fffdf7"}}); }
+    };
+    if (m.isStyleLoaded()) update(); else m.once("load", update);
+    return () => { m.off("load", update); };
+  }, [areaEvidence]);
+
   useEffect(() => {
     const m = map.current;
     if (!m) return;
@@ -383,7 +404,7 @@ export default function MapView({
       });
     }
   }, [terrain]);
-  useEffect(()=>{const m=map.current;if(!m)return;const high=preset==='headwaters';m.easeTo({center:high?[84.25,28.3]:preset==='settlement'?[85.16715,25.6938]:[85.16,25.71],zoom:high?10.2:preset==='settlement'?17.6:12.3,pitch:terrain?60:0,bearing:terrain?-18:0,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:700});},[preset]);
+  useEffect(()=>{const m=map.current;if(!m)return;const high=preset==='headwaters';m.easeTo({center:high?[84.25,28.3]:preset==='settlement'?[85.16715,25.6938]:[85.16,25.71],zoom:high?10.2:preset==='settlement'?17.6:12.3,pitch:terrain?40:0,bearing:terrain?-18:0,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:700});},[preset]);
   useEffect(()=>{const m=map.current;if(!m)return;const update=()=>{const show=!focusArea&&terrain&&scene3d&&preset!=='headwaters'&&!satellite;if(m.getLayer('satellite'))m.setLayoutProperty('satellite','visibility',satellite?'visible':'none');if(m.getLayer('base'))m.setLayoutProperty('base','visibility',satellite||show?'none':'visible');for(const id of ['scene-water','scene-woods','scene-rivers','scene-roads','scene-buildings','scene-trees'])if(m.getLayer(id))m.setLayoutProperty(id,'visibility',show?'visible':'none');};if(m.isStyleLoaded())update();else m.once('load',update);return()=>{m.off('load',update)}},[terrain,scene3d,preset,satellite,focusArea]);
   useEffect(()=>{
     const m = map.current;
@@ -550,7 +571,7 @@ export default function MapView({
       const fraction = Math.max(0.08, Math.min(1, discharge / Math.max(1, dischargeMax)));
       bar.style.height = `${Math.round(fraction * 30)}px`;
     }
-    gauge.el.title = `GloFAS modeled discharge on ${dateLabel} at 85.125, 25.775. Sample-cell estimate, not a gauge. Bar is relative to the nine-day window, not flood depth or extent.`;
+    gauge.el.title = `GloFAS modeled discharge on ${dateLabel} at 85.125, 25.775. Sample-cell estimate, not a gauge. Bar is relative to the selected history window, not flood depth or extent.`;
   }, [discharge, dischargeMax, dateLabel]);
   // Terrain-only water scenario: a flat user-set surface painted over DEM
   // cells below it. No hydraulic routing, timing, embankments or depth model.

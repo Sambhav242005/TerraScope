@@ -1,0 +1,11 @@
+.area-review { color: inherit; min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: .875rem; }
+.area-review h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+.area-review p { margin: .5rem 0; line-height: 1.5; }
+.area-review details { border-top: 1px solid currentColor; margin-top: .6rem; padding-top: .2rem; }
+.area-review summary { cursor: pointer; padding: .7rem .25rem; min-height: 44px; box-sizing: border-box; }
+.area-review summary:focus-visible, .area-review a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.area-review dl { margin: .5rem 0; }
+.area-review dt { font-weight: 600; margin-top: .5rem; }
+.area-review dd { margin: .15rem 0 .5rem; }
+.area-review li { margin-bottom: .6rem; }
+.area-review-air { border-left: 3px solid currentColor; padding-left: .75rem; }
