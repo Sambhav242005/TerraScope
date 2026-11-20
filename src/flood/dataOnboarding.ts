@@ -21,6 +21,8 @@ export type Dependency = {
 };
 
 export const DEPENDENCIES: Dependency[] = [
+  { dataset: "selected-area-rainfall", usedBy: ["Regional history replay", "UTC rainfall table and CSV", "Hourly runoff sensitivity"], loadBearing: true },
+  { dataset: "selected-area-flow", usedBy: ["Regional history replay", "Returned-cell map marker", "UTC discharge table and CSV"], loadBearing: true },
   { dataset: "rainfall", usedBy: ["Explore replay (rainfall chart)", "Runoff comparison", "Historical data table", "CSV export", "ENSO analog analysis"], loadBearing: true },
   { dataset: "discharge", usedBy: ["Explore replay (discharge chart + map marker)", "River history view", "Runoff comparison", "Historical data table", "CSV export", "ENSO analog analysis"], loadBearing: true },
   { dataset: "assets", usedBy: ["Map amenities", "Placement checks", "Field checks", "Response plan draft"], loadBearing: true },
@@ -173,13 +175,13 @@ export function onboardNewAreaPlan(area: { lat: number; lon: number }): Onboardi
       },
       {
         order: 5,
-        action: "Historical ERA5/GloFAS and 2015–2024 history series stay bound to Sonpur/26.5N·84.25E and 25.775N·85.125E; they are never relocated to the new area.",
-        source: "public/data/manifest.json",
-        failure: "Historical series are never relocated to another area; doing so is a data-category error and the UI labels their origin.",
+        action: "Automatically download selected-area historical ERA5 precipitation and GloFAS flow for the selected dates; validate UTC axes, units and returned cells, cache responses with query and SHA-256, and update the replay.",
+        source: "src/flood/regionalHistory.ts",
+        failure: "Bundled historical series are never relocated to another area. A failed regional connector stays unavailable while the independent source remains usable. River identity remains unverified.",
       },
       {
         order: 6,
-        action: "Report dependency coverage for the review centre: which features rerun (storage screening, placement checks), which do not (historical replay, NRSC).",
+        action: "Report dependency coverage for the review centre: storage screening, placement checks and historical replay rerun. Observed flood footprints and catchment rainfall require separate data.",
         source: "DEPENDENCIES registry",
         failure: "A load-bearing dataset missing its check → the affected feature blocks or shows unknown, never stale numbers.",
       },
@@ -212,7 +214,7 @@ export function buildOnboardingReport(manifest: ManifestEntry[], now: Date): Onb
 }
 
 export const ONBOARDING_LIMITS = [
-  "Historical series are not relocated to new areas; coverage for a new area comes only from its own OSM extract and the published NRSC bounds.",
+  "Selected-area history downloads ERA5 and GloFAS independently; missing or failed regional records never borrow the Sonpur series. Nearest-cell river identity remains unverified.",
   "Freshness checks apply to current-mapping layers; archived ERA5/GloFAS series are pinned by sha256 and are not 'stale' by age.",
   "Missing coverage is never a clearance; absence of a finding is not suitability.",
   "No schema check can reveal features that are unmapped or outside the bounded box; that residual is reported as coverage, not as suitability.",

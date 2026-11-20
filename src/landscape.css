@@ -279,3 +279,16 @@
   .landscape-shell .proposal-controls summary { min-height: 36px; }
   .landscape-shell .proposal-controls details > summary { padding-inline: 6px; }
 }
+.regional-history { padding: 1rem; line-height: 1.5; overflow-wrap: anywhere; }
+.regional-history h2 { font-size: 1.25rem; margin-block: 0 .75rem; }
+.regional-history h3 { font-size: 1rem; margin-block: 1rem .5rem; }
+.regional-history p { margin-block: .6rem; }
+.regional-history article { border-block-start: 1px solid var(--line, #cbd5cc); margin-block-start: 1rem; }
+.regional-history form { display: grid; gap: .4rem; }
+.regional-history input, .regional-history button { font: inherit; font-size: 1rem; min-height: 48px; padding: .5rem; min-width: 0; max-width: 100%; }
+.regional-history button { white-space: normal; }
+.regional-history code { overflow-wrap: anywhere; font-size: .75rem; }
+.regional-history-status { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .8rem; margin: 0; padding: .5rem 1rem; }
+.regional-history-status button { min-height: 44px; padding-inline: .6rem; }
+.regional-history a { color: #15598b; text-decoration: underline; }
+.regional-history :focus-visible { outline: 2px solid #15598b; outline-offset: 2px; }

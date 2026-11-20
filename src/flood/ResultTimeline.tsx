@@ -10,6 +10,7 @@ import {
 import { loadHistorySeries, type HistoryRow } from "./historySeries";
 import type { ScreeningRun } from "./storage/storageSearch";
 import type { Intervention } from "./intervention";
+import type { RegionalSeries } from "./regionalHistory";
 
 const STATE_LABEL: Record<ResultState, string> = {
   available: "recorded",
@@ -61,6 +62,7 @@ export default function ResultTimeline({
   onClose,
   open,
   onOpen,
+  regional,
 }: {
   days: string[];
   dailyRain: Array<number | null>;
@@ -75,6 +77,7 @@ export default function ResultTimeline({
   open: boolean;
   /** Called when the browser reveals the panel via find-in-page (beforematch). */
   onOpen: () => void;
+  regional?: { rain: RegionalSeries | null; flow: RegionalSeries | null };
 }) {
   const [mode, setMode] = useState<"event" | "history">("event");
   const [year, setYear] = useState("2024");
@@ -127,8 +130,9 @@ export default function ResultTimeline({
         waterLevel,
         storageRun,
         interventions,
+        regional,
       }),
-    [days, dailyRain, discharge, waterOn, waterLevel, storageRun, interventions],
+    [days, dailyRain, discharge, waterOn, waterLevel, storageRun, interventions, regional],
   );
   const summary = useMemo(() => summarizeStates(entries), [entries]);
   const eventEntries = entries.filter((e) => e.day !== null || e.kind === "water-scenario");
@@ -158,8 +162,8 @@ export default function ResultTimeline({
               value={mode}
               onChange={(e) => setMode(e.target.value as "event" | "history")}
             >
-              <option value="event">Sep–Oct 2024 event replay (25 Sep – 3 Oct)</option>
-              <option value="history">2015–2024 multiyear history (daily)</option>
+              <option value="event">{regional ? "Selected-area historical period" : "Sep–Oct 2024 event replay (25 Sep – 3 Oct)"}</option>
+              {!regional && <option value="history">2015–2024 multiyear history (daily)</option>}
             </select>
             <button type="button" className="text-action" onClick={onOpenHistory}>
               Open interactive history
@@ -170,7 +174,7 @@ export default function ResultTimeline({
             </button>
             </div>
         </div>
-      {mode === "event" ? (
+      {mode === "event" || regional ? (
         <>
           <p className="result-timeline-note">
             Every record carries its own timestamp or date. A <em>gap</em> means no record — missing data is

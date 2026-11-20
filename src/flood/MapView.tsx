@@ -52,6 +52,7 @@ export default function MapView({
   replayDate,
   discharge = null,
   dischargeMax = 1,
+  dischargePoint = { lat: 25.775, lon: 85.125 },
   dateLabel = "",
   assets,
   selected,
@@ -93,6 +94,7 @@ export default function MapView({
   discharge?:number|null;
   /** Largest discharge in the replayed window; scales the marker bar only. */
   dischargeMax?:number;
+  dischargePoint?:{lat:number;lon:number}|null;
   dateLabel?:string;
   selected: string | null;
   onSelect: (id: string) => void;
@@ -558,10 +560,11 @@ export default function MapView({
   useEffect(() => {
     const gauge = riverGauge.current;
     if (!gauge) return;
-    if (discharge == null) {
+    if (discharge == null || !dischargePoint) {
       gauge.el.style.display = "none";
       return;
     }
+    gauge.marker.setLngLat([dischargePoint.lon, dischargePoint.lat]);
     gauge.el.style.display = "flex";
     const strong = gauge.el.querySelector("strong");
     if (strong) {
@@ -572,8 +575,8 @@ export default function MapView({
       const fraction = Math.max(0.08, Math.min(1, discharge / Math.max(1, dischargeMax)));
       bar.style.height = `${Math.round(fraction * 30)}px`;
     }
-    gauge.el.title = `GloFAS modeled discharge on ${dateLabel} at 85.125, 25.775. Sample-cell estimate, not a gauge. Bar is relative to the selected history window, not flood depth or extent.`;
-  }, [discharge, dischargeMax, dateLabel]);
+    gauge.el.title = `GloFAS modeled discharge on ${dateLabel} at ${dischargePoint.lon}, ${dischargePoint.lat}. River match unverified. Sample-cell estimate, not a gauge. Bar is relative to the selected history window, not flood depth or extent.`;
+  }, [discharge, dischargeMax, dateLabel, dischargePoint?.lat, dischargePoint?.lon]);
   // Terrain-only water scenario: a flat user-set surface painted over DEM
   // cells below it. No hydraulic routing, timing, embankments or depth model.
   useEffect(() => {

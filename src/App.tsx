@@ -39,6 +39,9 @@ import {
 import { AreaReviewPanel } from "./flood/areaReview/AreaReviewPanel";
 import { emptyGeometry, type AreaEvidenceCollection, type AreaReview } from "./flood/areaReview/contracts";
 import MapView from "./flood/MapView";
+import RegionalHistoryPanel, { historyStatus } from "./flood/RegionalHistoryPanel";
+import { useRegionalHistory } from "./flood/useRegionalHistory";
+import { requestDays, type HistoryRequest } from "./flood/regionalHistory";
 import RiverHistory, { type HistoryFrame } from "./flood/RiverHistory";
 import ResultTimeline from "./flood/ResultTimeline";
 import EnsoContext from "./flood/EnsoContext";
@@ -339,8 +342,8 @@ const waterNote = (w: StoredCandidate["waterEvidence"]) =>
 export default function App() {
   const [saved, setSaved] = useState(load),
     [panel, setPanel] = useState<WorkspacePanel>(null),
-    [rain, setRain] = useState<Rain | null>(null),
-    [flow, setFlow] = useState<Flow | null>(null),
+    [bundledRain, setRain] = useState<Rain | null>(null),
+    [bundledFlow, setFlow] = useState<Flow | null>(null),
     [osm, setOsm] = useState<Asset[]>([]),
     [manifest, setManifest] = useState<
       Array<{
@@ -406,10 +409,36 @@ export default function App() {
   const openPanel = (next: WorkspacePanel, trigger?: HTMLButtonElement) => {
     if (trigger) panelTrigger.current = trigger;
     setPanel(current => current === next ? null : next);
-    if (next === "River history") { setHistoryMode(true); setPlaying(false); }
+    if (next === "River history") { setHistoryMode(!mapTarget); setPlaying(false); }
   };
   const proposalItems = useMemo(() => saved.interventions ?? [], [saved.interventions]);
-  const [mapTarget, setMapTarget] = useState<MapTarget | null>(()=>saved.mapTarget??null);
+  const [mapTarget, setMapTarget] = useState<MapTarget | null>(() => saved.mapTarget ??
+    (distanceKm(saved.area, initial.area) > 0.5 ? { ...saved.area, label: "Saved area" } : null));
+  const [historyDates, setHistoryDates] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("terrascope.history-dates.v1") ?? "null");
+      requestDays({ ...saved.area, ...stored });
+      return { start: String(stored.start), end: String(stored.end) };
+    } catch { return { start: "2024-09-01", end: "2024-09-30" }; }
+  });
+  const regionalRequest: HistoryRequest | null = mapTarget ? { ...saved.area, ...historyDates } : null;
+  const regional = useRegionalHistory(regionalRequest);
+  const rain = mapTarget ? (regional.rain.series?.hourly ? {
+    ...regional.rain.series, hourly: regional.rain.series.hourly,
+  } : null) : bundledRain;
+  const flow = mapTarget ? (regional.flow.series ? {
+    ...regional.flow.series, daily: { time: regional.flow.series.dates, river_discharge: regional.flow.series.values },
+  } : null) : bundledFlow;
+  useEffect(() => {
+    if (!mapTarget) return;
+    setPlaying(false); setDay(0); setHistoryMode(false); setHistoryFrame(null); setWaterOn(false);
+  }, [mapTarget?.lat, mapTarget?.lon, historyDates.start, historyDates.end]);
+  const changeHistoryDates = (start: string, end: string) => {
+    setHistoryDates({ start, end });
+    try { localStorage.setItem("terrascope.history-dates.v1", JSON.stringify({ start, end })); } catch {}
+  };
+  const regionalDays = regionalRequest ? requestDays(regionalRequest) : null;
+  const replayLength = regionalDays?.length ?? 9;
   const [placementError, setPlacementError] = useState("");
   const [placementAttempt, setPlacementAttempt] = useState<PlacementAttempt | null>(null);
   const [cameraPoint, setCameraPoint] = useState<{lat:number;lon:number} | null>(null);
@@ -706,16 +735,16 @@ export default function App() {
     const timer = setInterval(
       () =>
         setDay((d) => {
-          if (d >= 8) {
+          if (d >= replayLength - 1) {
             setPlaying(false);
-            return 8;
+            return replayLength - 1;
           }
           return d + 1;
         }),
       1200,
     );
     return () => clearInterval(timer);
-  }, [playing]);
+  }, [playing, replayLength]);
   useEffect(() => {
     let live = true;
     loadHistorySeries().then(
@@ -766,19 +795,19 @@ export default function App() {
   );
   const active = assets.find((a) => a.id === selected);
   const days =
-    flow?.daily.time ??
+    regionalDays ?? flow?.daily.time ??
     Array.from({ length: 9 }, (_, i) =>
       new Date(Date.UTC(2024, 8, 25 + i)).toISOString().slice(0, 10),
     );
   const dailyRain = useMemo(
     () =>
-      Array.from({ length: 9 }, (_, i) => {
+      Array.from({ length: replayLength }, (_, i) => {
         const slice = rain?.hourly.precipitation.slice(i * 24, (i + 1) * 24);
-        return !slice || slice.some((n) => n === null)
+        return !slice || slice.length !== 24 || slice.some((n) => n === null)
           ? null
           : slice.reduce<number>((a, b) => a + (b ?? 0), 0);
       }),
-    [rain],
+    [rain, replayLength],
   );
   const flowMax = useMemo(
     () =>
@@ -826,11 +855,13 @@ export default function App() {
         : [],
     [storageRun],
   );
-  const replayDate = historyMode && historyFrame ? historyFrame.date : days[day];
+  const replayDay = Math.min(day, days.length - 1);
+  const replayDate = historyMode && historyFrame && !mapTarget ? historyFrame.date : days[replayDay];
   const currentAreaReview = areaReview?.latitude === saved.area.lat && areaReview.longitude === saved.area.lon ? areaReview : null;
   const revision = useMemo(() => crypto.getRandomValues(new Uint32Array(4)).join("-"), [
     saved.area.lat, saved.area.lon, replayDate, historyMode, storageRun, storageWater, storageBusy,
     currentAreaReview, historyRows, manifest, proposalItems, placementReview.state,
+    regional.rain.series, regional.flow.series, historyDates.start, historyDates.end,
     placementReview.loadedAreaKey, placementReview.evidence,
   ]);
   const currentScreen = !storageBusy && storageRun?.status === "succeeded" &&
@@ -1489,11 +1520,12 @@ export default function App() {
               onEvidenceSelect={() => setPanel("Environment")}
               focusArea={mapTarget}
               focusPoint={cameraPoint}
-              waterLevel={waterOn ? waterLevel : null}
-              replayDate={historyMode && historyFrame ? historyFrame.date : days[day]}
-              discharge={historyMode ? historyFrame?.flow ?? null : flow?.daily.river_discharge[day] ?? null}
+              waterLevel={waterOn && !mapTarget ? waterLevel : null}
+              replayDate={replayDate}
+              discharge={historyMode && !mapTarget ? historyFrame?.flow ?? null : flow?.daily.river_discharge[replayDay] ?? null}
+              dischargePoint={mapTarget ? (regional.flow.series ? { lat: regional.flow.series.latitude, lon: regional.flow.series.longitude } : null) : undefined}
               dischargeMax={historyMode ? historyFrame?.maximum ?? flowMax : flowMax}
-              dateLabel={historyMode && historyFrame ? historyFrame.date : `${date(days[day])} 2024`}
+              dateLabel={replayDate}
               assets={assets}
               selected={selected}
               onSelect={(id) => { choose(id); setPanel("Explore"); }}
@@ -1523,7 +1555,11 @@ export default function App() {
               placementEvidence={placementReview.evidence}
               onDismissPlacementAttempt={dismissPlacementAttempt}
             />
-      {mapTarget && <details className="area-data-note"><summary>{mapTarget.label} / Sonpur history stays at its source location</summary> {placementReview.state === 'ready' ? 'Area map checks loaded (incomplete OSM mapping).' : placementReview.state === 'loading' ? 'Loading area building/road/water checks…' : 'Area checks failed; new placement is blocked.'} <button onClick={placementReview.retry}>Retry area checks</button><br/>Rainfall and discharge series remain the original Sonpur case and do not describe this selected area. NRSC dated map-color snapshots are used only where their published bounds cover the footprint. Terrain screening runs for the selected centre; suitability remains unverified.</details>}
+      {mapTarget && <details className="area-data-note"><summary>{mapTarget.label} · historical data</summary>
+        <p>Rainfall {historyStatus(regional.rain)}. River flow {historyStatus(regional.flow)}.</p>
+        <button onClick={() => { setHistoryMode(false); setPanel("River history"); }}>History sources &amp; dates</button>
+        <p>{placementReview.state === "ready" ? "Area map checks loaded." : placementReview.state === "loading" ? "Loading area map checks…" : "Area checks failed."} OSM mapping is incomplete.</p>
+      </details>}
           <div className="landscape-view-controls" role="group" aria-label="Map perspective"><button aria-pressed={!terrain} onClick={() => setTerrain(false)}>2D</button><button aria-pressed={terrain} onClick={() => setTerrain(true)}>3D</button></div>
           <button
             className="layer-toggle"
@@ -1612,17 +1648,17 @@ export default function App() {
           )}
           <details className="map-summary"><summary>Event measurements</summary>
             <div className="summary-date">
-              <strong>Day {day + 1}</strong>
+              <strong>Day {replayDay + 1}</strong>
               <span>
-                {date(days[day])} 2024
+                {date(days[replayDay])} {days[replayDay].slice(0, 4)}
               </span>
             </div>
             <div title="ERA5 sample grid cell · daily total">
               <CloudRain size={14} />
               <span>
-                Sonpur event rain
+                {mapTarget ? "Area rainfall (UTC)" : "Sonpur event rain"}
                 <strong>
-                  {fmt(dailyRain[day])}
+                  {fmt(dailyRain[replayDay])}
                   <small> mm/d</small>
                 </strong>
               </span>
@@ -1630,9 +1666,9 @@ export default function App() {
             <div title="GloFAS modeled discharge at the sample river cell">
               <Waves size={14} />
               <span>
-                Sonpur event flow
+                {mapTarget ? "Area modeled flow" : "Sonpur event flow"}
                 <strong>
-                  {fmt(flow?.daily.river_discharge[day])}
+                  {fmt(flow?.daily.river_discharge[replayDay])}
                   <small> m³/s</small>
                 </strong>
               </span>
@@ -1650,7 +1686,8 @@ export default function App() {
         <aside ref={contextPanel} className="side-panel" id="landscape-context" hidden={panel === null} tabIndex={0} aria-label="Map context panel" onKeyDown={e => { if (e.key === "Escape") closePanel(); }}>
           <button className="context-close" onClick={closePanel} aria-label="Close context panel"><X size={18} /></button>
           <div hidden={panel !== "River history"}>
-            <RiverHistory onMap={closePanel} onSources={() => setSources(true)} onFrame={setHistoryFrame} active={panel === "River history"} />
+            {regionalRequest ? <RegionalHistoryPanel request={regionalRequest} label={mapTarget!.label} rain={regional.rain} flow={regional.flow} onDates={changeHistoryDates} onRetry={regional.retry} /> :
+              <RiverHistory onMap={closePanel} onSources={() => setSources(true)} onFrame={setHistoryFrame} active={panel === "River history"} />}
           </div>
           <div hidden={panel !== "Environment"}><AreaReviewPanel latitude={saved.area.lat} longitude={saved.area.lon} onGeometryChange={setAreaGeometry} onReviewChange={setAreaReview} evidenceSelection={evidenceSelection} active={panel === "Environment"} /></div>
           <div hidden={panel === "River history" || panel === "Environment"}>
@@ -1676,7 +1713,7 @@ export default function App() {
           </div>
           {panel === "Compare" && <section className="visual-comparison" aria-label="Proposal visibility comparison"><h3>Proposal geometry</h3><div><button aria-pressed={!showInterventions} onClick={() => setShowInterventions(false)}>Existing place</button><button aria-pressed={showInterventions} onClick={() => setShowInterventions(true)}>With proposals ({proposalItems.length})</button></div></section>}
           {panel === "Explore" && <button className="secondary" onClick={() => setAdding(!adding)}><Plus size={15} />Add resource</button>}
-          {panel === "Explore" && <Findings historyRows={historyRows} manifest={manifest} storageRun={storageRun} proposalCount={(saved.interventions ?? []).length} replayDate={days[day]} ensoYear={2024} onOpenEnso={() => { setSources(false); setShowTable(false); setShowGuide(false); setShowEnso(true); }} />}
+          {panel === "Explore" && !mapTarget && <Findings historyRows={historyRows} manifest={manifest} storageRun={storageRun} proposalCount={(saved.interventions ?? []).length} replayDate={days[day]} ensoYear={2024} onOpenEnso={() => { setSources(false); setShowTable(false); setShowGuide(false); setShowEnso(true); }} />}
           <section className="storage-panel" aria-label="Natural water-storage screening" hidden={panel !== "Explore"}>
             <div className="storage-head">
               <Droplets size={16} />
@@ -2470,34 +2507,35 @@ export default function App() {
         aria-label="Historical timeline"
         hidden={historyMode}
       >
+        {mapTarget && <p className="regional-history-status" role="status">Rainfall {historyStatus(regional.rain)} ? Flow {historyStatus(regional.flow)} ? UTC ? River match unverified <button onClick={() => { setPanel("River history"); setHistoryMode(false); }}>Source &amp; coverage</button></p>}
         <div className="timeline-top">
           <button
             className="play-button"
             aria-label={playing ? "Pause replay" : "Play replay"}
             onClick={() => {
-              if (day === 8) setDay(0);
+              if (replayDay === days.length - 1) setDay(0);
               setPlaying(!playing);
             }}
           >
             {playing ? <Pause size={17} /> : <Play size={17} />}
           </button>
           <div className="timeline-title">
-            <strong>Replay the conditions</strong>
-            <span>{date(days[day])} 2024</span>
+            <strong>{mapTarget ? "Area historical replay" : "Replay the conditions"}</strong>
+            <span>{date(days[replayDay])} {days[replayDay].slice(0, 4)}</span>
           </div>
           <input
             aria-label="Replay day"
             type="range"
             min="0"
-            max="8"
+            max={days.length - 1}
             step="1"
-            value={day}
+            value={replayDay}
             onChange={(e) => {
               setPlaying(false);
               setDay(Number(e.target.value));
             }}
           />
-          <span className="day-count">Day {day + 1} / 9</span>
+          <span className="day-count">Day {replayDay + 1} / {days.length}</span>
           <button
             className="secondary table-button"
             ref={resultTrigger}
@@ -2523,7 +2561,7 @@ export default function App() {
                 <CloudRain size={15} />
                 Rainfall input
               </span>
-              <small>ERA5 sample cell · daily total, IST · mm</small>
+              <small>ERA5 sample cell · daily total, {mapTarget ? "UTC" : "IST"} · mm</small>
             </div>
             <Spark values={dailyRain} bars color="#6a9cc6" />
           </div>
@@ -2544,6 +2582,7 @@ export default function App() {
                 <input
                   type="checkbox"
                   aria-label="Show water-level scenario"
+                  disabled={!!mapTarget}
                   checked={waterOn}
                   onChange={(e) => setWaterOn(e.target.checked)}
                 />
@@ -2578,6 +2617,7 @@ export default function App() {
       </section>
       {(
         <ResultTimeline
+          regional={mapTarget ? { rain: regional.rain.series, flow: regional.flow.series } : undefined}
           days={days}
           dailyRain={dailyRain}
           discharge={flow?.daily.river_discharge ?? []}
@@ -2803,7 +2843,7 @@ export default function App() {
                     <p className="small-copy">Onboarding report unavailable (manifest not loaded).</p>
                   )}
                 </details>
-                <h3>What is still needed</h3>
+                <p>Bundled source cards above describe the Sonpur case. Selected-area downloads appear in History sources &amp; dates.</p><h3>What is still needed</h3>
                 <p>
                   Surveyed channels, embankment levels, independent event flood
                   extents, local river observations and archived forecast
@@ -2850,7 +2890,7 @@ export default function App() {
             ) : (
               <>
                 <p>
-                  Rainfall daily totals use IST. Discharge daily values use the
+                  {mapTarget ? "Rainfall daily totals use UTC for this area." : "Rainfall daily totals use IST."} Discharge daily values use the
                   original UTC model dates; they are not recalculated for the
                   local day.
                 </p>
@@ -2859,7 +2899,7 @@ export default function App() {
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Rainfall (mm, IST)</th>
+                        <th>Rainfall (mm, {mapTarget ? "UTC" : "IST"})</th>
                         <th>Discharge (m³/s, UTC)</th>
                       </tr>
                     </thead>
@@ -2878,7 +2918,7 @@ export default function App() {
                   className="primary"
                   onClick={() =>
                     download(
-                      "date,rainfall_mm_IST,modeled_discharge_m3s_UTC\n" +
+                      "date,rainfall_mm_" + (mapTarget ? "UTC" : "IST") + ",modeled_discharge_m3s_UTC\n" +
                         days
                           .map(
                             (d, i) =>
@@ -2919,8 +2959,8 @@ export default function App() {
       <div className="conversation-slot" id="map-conversation" ref={deskSlot} hidden={!showDecisionDesk} onKeyDown={e => { if (e.key === "Escape") closeDecisionDesk(); }}>
         <DecisionDesk
           context={{
-            history: historyRows,
-            manifest,
+            history: mapTarget ? null : historyRows,
+            manifest: mapTarget ? [] : manifest,
             ensoYear: 2024,
             storageRun,
             proposalCount: (saved.interventions ?? []).length,

@@ -4,6 +4,7 @@
 import { NRSC_SNAPSHOTS_ENABLED, NRSC_FLOOD_SNAPSHOTS } from "./nrsc.ts";
 import type { ScreeningRun } from "./storage/storageSearch";
 import type { Intervention } from "./intervention";
+import type { RegionalSeries } from "./regionalHistory";
 
 export type ResultState = "available" | "gap" | "input";
 export type ResultKind =
@@ -39,6 +40,7 @@ export type ResultTimelineInput = {
   interventions: Intervention[];
   /** Override for the build constant; tests only. Defaults to NRSC_SNAPSHOTS_ENABLED. */
   nrscEnabled?: boolean;
+  regional?: { rain: RegionalSeries | null; flow: RegionalSeries | null };
 };
 
 const number = (v: number | null | undefined) =>
@@ -54,6 +56,8 @@ export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
 
   for (let i = 0; i < days.length; i++) {
     const day = days[i];
+    const regionalRain = input.regional?.rain;
+    const regionalFlow = input.regional?.flow;
     const rain = number(dailyRain[i] ?? null);
     entries.push({
       id: `rainfall-${day}`,
@@ -61,7 +65,7 @@ export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
       day,
       time: null,
       title: rain == null ? "ERA5 rainfall — no record" : `ERA5 rainfall — ${fmt(rain, 1, "mm")}`,
-      detail:
+      detail: input.regional ? (regionalRain ? `UTC day ${day} · ERA5 at ${regionalRain.latitude}, ${regionalRain.longitude} · ${regionalRain.resolution} · sample-cell precipitation, not catchment rainfall. Response ${regionalRain.sha256}.` : `Selected-area rainfall unavailable for ${day}.`) :
         rain == null
           ? `No ERA5 record for ${day}; missing data is not zero and missing hourly values are not interpolated. Sample cell 26.5°N, 84.25°E (IST day).`
           : `IST day ${day} · ERA5 sample cell 26.5°N, 84.25°E · hourly reanalysis summed; not catchment-average or gauge rainfall.`,
@@ -75,18 +79,18 @@ export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
       day,
       time: null,
       title: flow == null ? "GloFAS discharge — no record" : `GloFAS discharge — ${fmt(flow, 0, "m³/s")}`,
-      detail:
+      detail: input.regional ? (regionalFlow ? `UTC day ${day} · GloFAS at ${regionalFlow.latitude}, ${regionalFlow.longitude} · ${regionalFlow.resolution} · river match unverified. Response ${regionalFlow.sha256}.` : `Selected-area discharge unavailable for ${day}.`) :
         flow == null
           ? `No GloFAS record for ${day}; missing data is not zero. Model output, not a gauge observation.`
           : `UTC day ${day} · GloFAS model at 25.775°N, 85.125°E · not a gauge reading or an issue-time forecast.`,
       state: flow == null ? "gap" : "available",
     });
 
-    const snapshot = nrscEnabled
+    const snapshot = nrscEnabled && !input.regional
       ? NRSC_FLOOD_SNAPSHOTS.find((s) => s.id.startsWith(day))
       : undefined;
     const DAYS_OBSERVED = ["2024-10-01", "2024-10-02"];
-    const withheld = !nrscEnabled && DAYS_OBSERVED.includes(day);
+    const withheld = !input.regional && !nrscEnabled && DAYS_OBSERVED.includes(day);
     entries.push(
       snapshot
         ? {
@@ -104,7 +108,7 @@ export function buildResultTimeline(input: ResultTimelineInput): ResultEntry[] {
             day,
             time: null,
             title: withheld ? "NRSC snapshot withheld" : "No observed NRSC snapshot",
-            detail: withheld
+            detail: input.regional ? `No licensed observed footprint connected for the selected area on ${day}.` : withheld
               ? "An NRSC observation exists for this day in the project's development build, but the maps may not be redistributed on a public host (production rights not cleared). Extent here is unknown."
               : `No NRSC observation for ${day}; only 1 and 2 Oct 2024 are published. Nothing is interpolated - unmarked pixels are unknown, not dry.`,
             state: "gap",

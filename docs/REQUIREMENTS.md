@@ -114,3 +114,7 @@ Partial R06/R13: grouped 3D solar tables and individual 3D turbines are connecte
 ## Collision prevention and area search ? 5 November 2026
 
 Partial R01/R03/R06/R11/R13/R15/R16: new conflicting placements are rejected; conflicting/unchecked saved models are hidden without deleting proposals. Other-proposal envelopes and the illustrative rotor span are checked. Submitted place search and coordinate/map area selection move the camera and fetch bounded OSM constraints for supported new areas, with failed/loading/outside coverage blocking placement. Selected areas persist. Sonpur historical/scientific inputs are explicitly not relocated. Evidence, access limits and remaining gaps: docs/AREA_SEARCH_COLLISIONS.md. No requirement is cancelled or fully completed by this slice.
+
+## Regional historical download update — 20 November 2026
+
+R10/R15/R16 now include automatic selected-area ERA5 precipitation and GloFAS flow retrieval for up to 366 historical UTC days, with bounded cache, partial failures, provenance and replay integration. The live test near Seondha, MP, established API coverage and UI wiring. River-cell identity, observations/footprints and physical-phone performance remain unverified. This is a bounded regional onboarding extension; all other requirements remain active. Evidence and limitations are in docs/DELIVERY.md.

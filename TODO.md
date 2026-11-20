@@ -234,3 +234,8 @@ Header follow-up (partial R01/R13): merged search, placement and proposal contro
 Recording viewport follow-up (R13/R14): 1280x1100 walkthrough with desktop map capped at 650px to keep history graph and playback controls visible together. Build and compact-header checks pass; taller walkthrough rehearsed with real data. See artifacts/tall-demo.
 
 Repository preparation (R14): added .gitignore, public .env.example and docs/GITHUB_SETUP.md. Source and bundled data retained; local outputs excluded. (Historical entry from 5 Nov 2026; superseded 15 Nov 2026 — commits pushed continuously, public deploy live at https://terrascope-floods.embarko.app, claimed permanent by the user's token.)
+
+## Automatic regional history — 20 November 2026
+
+- [x] R10/R15/R16 — Automatically download selected-area ERA5 rainfall and GloFAS flow, validate/copy provenance, cache bounded snapshots and update the daily replay/table/marker. Live MP access and failure/cache/race fixtures verified; see docs/DELIVERY.md.
+- [ ] R11/R16 — Independently match a returned GloFAS cell to the intended river and validate its upstream drainage. Current UI explicitly reports river identity unverified.
