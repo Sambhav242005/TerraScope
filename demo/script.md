@@ -1,37 +1,67 @@
-# TerraScope read-aloud script
+# TerraScope · Madhya Pradesh film
 
-You can personalize the introduction by saying “I’m **[your name]**, a student, and I built TerraScope to explore that question along Bihar’s Gandak River.”
+78 seconds. AI narration is embedded in terrascope-submission.mp4. Seondha is a town on the Sindh River. The flow source is a nearby model cell whose river identity remains unverified.
 
-**0:00**
+**00:00.439–00:03.462**
 
-Where could floodwater go?
+TerraScope helps planners choose where to investigate.
 
-**0:03**
+**00:03.962–00:09.102**
 
-I’m a student, and I built TerraScope to explore that question along Bihar’s Gandak River.
+Imagine a team in Madhya Pradesh looking to store floodwater upstream of a village.
 
-**0:10**
+**00:09.602–00:11.246**
 
-I scrub from 28 September to 2 October. ERA5 reconstructs rainfall. GLOFAS models river flow. The landscape stays fixed as the readings change.
+Where should the survey crew start?
 
-**0:23**
+**00:12.157–00:14.263**
 
-In Explore, the terrain screen flags low spots near Sonepur. A field team can use this list to decide where to survey for temporary water storage.
+We search near Seondha on the Sindh River.
 
-**0:33**
+**00:14.689–00:22.800**
 
-I open 1 depression and check its footprint and estimated volume up to the spill rim. The card shows that usable storage is still unknown and suitability is unassessed.
+TerraScope loads terrain, buildings and water, then downloads September 2024 rainfall and nearby river-flow history.
 
-**0:45**
+**00:23.460–00:27.255**
 
-The cross-section shows where the terrain dips. Before relying on it, I’d ask a field team to survey the ground and check how water actually drains.
+Watch the date change as historical model outputs play back.
 
-**0:55**
+**00:27.755–00:30.698**
 
-I asked my AI agent to deploy TerraScope with Embarko and give me a public link. The agent built and deployed the prototype, so someone else can open the same map and inspect the evidence.
+Their source, grid cells and coverage are shown here.
 
-**1:09**
+**00:33.460–00:36.287**
 
-Try TerraScope at the address on screen. Replay the dates, open a candidate, and see what you’d check in the field.
+The terrain screen finds low spots near Seondha.
 
-The end card shows terrascope-floods.embarko.app and #DeployWithEmbarko.
+**00:36.787–00:38.629**
+
+Select one to inspect its shape.
+
+**00:40.460–00:45.691**
+
+The card shows its footprint and a terrain-based volume estimate up to the spill rim.
+
+**00:46.191–00:49.718**
+
+Field measurements are needed to establish usable storage.
+
+**00:52.460–00:54.161**
+
+The cross-section shows the dip.
+
+**00:54.661–00:59.531**
+
+A field team still needs to measure the outlet, check drainage and assess the site.
+
+**01:02.460–01:06.690**
+
+I built TerraScope with an AI agent and published it with Embarko.
+
+**01:09.460–01:11.857**
+
+Try the live map at the address on screen.
+
+**01:12.357–01:16.200**
+
+TerraScope. From a planning question to a place worth surveying.

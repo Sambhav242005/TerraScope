@@ -2,6 +2,16 @@
 
 **[Play or download the standalone narrated film](../demo/terrascope-submission.mp4).** This 78-second edition includes its own English narration and on-screen captions. It plays directly in a video player. [Timed transcript for this edition](../demo/terrascope-submission.vtt).
 
+## Current MP film
+
+The current cut follows Seondha in Madhya Pradesh. OpenStreetMap identifies Seondha as a town and maps the nearby Sindh River. The film searches for the town, shows automatic September 2024 rainfall and nearby modeled-flow downloads, inspects source cells and coverage, advances the daily replay, and opens a terrain candidate and its cross-section. The returned flow cell's river identity remains unverified and is visible in the source panel.
+
+The [current timed script](../demo/script.md), [rehearsal page](../demo/rehearse.html) and [silent footage](../demo/terrascope-clean.mp4) match the new MP cut. The build credit appears over the working map. The last frame shows the public URL and hashtag. Native landscape composition preserves the app navigation and replay controls, with 164 pixels of bottom clearance for the caption band.
+
+`node scripts/record-mp-demo.mjs --rehearse` discovers and checks the live sequence. `node scripts/record-mp-demo.mjs` records it. `python scripts/render-mp-demo.py` composes the raw recording with the generated narration, caption metadata and word alignment in `artifacts/mp-video/` and `artifacts/voice-review/`. The renderer requires those local production inputs. It replaces the narrated MP4, silent MP4, sidecar captions, read-aloud script and rehearsal cues after checking the MP4s.
+
+The earlier Gandak production notes below describe the previous cut.
+
 The 78-second demo follows a planner reviewing the Gandak replay, inspecting a possible storage site near Sonepur and deciding what a field team should measure. The last scene reconstructs the deployment prompt and shows the public URL. Use the [read-aloud script](../demo/script.md) and [timed captions](../demo/terrascope-demo.vtt) for the exact words. The [rehearsal page](../demo/rehearse.html) plays the cut and holds at each cue until the speaker advances.
 
 ## Brief for the subtitle and transcription agent

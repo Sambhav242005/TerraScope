@@ -1,42 +1,42 @@
 window.DEMO_CUES = [
   {
     "start": 0,
-    "end": 3,
-    "text": "Where could floodwater go?"
+    "end": 12,
+    "text": "TerraScope helps planners choose where to investigate. Imagine a team in Madhya Pradesh looking to store floodwater upstream of a village. Where should the survey crew start?"
   },
   {
-    "start": 3,
-    "end": 10,
-    "text": "I’m a student, and I built TerraScope to explore that question along Bihar’s Gandak River."
-  },
-  {
-    "start": 10,
+    "start": 12,
     "end": 23,
-    "text": "I scrub from 28 September to 2 October. ERA5 reconstructs rainfall. GLOFAS models river flow. The landscape stays fixed as the readings change."
+    "text": "We search near Seondha on the Sindh River. TerraScope loads terrain, buildings and water, then downloads September 2024 rainfall and nearby river-flow history."
   },
   {
     "start": 23,
     "end": 33,
-    "text": "In Explore, the terrain screen flags low spots near Sonepur. A field team can use this list to decide where to survey for temporary water storage."
+    "text": "Watch the date change as historical model outputs play back. Their source, grid cells and coverage are shown here."
   },
   {
     "start": 33,
-    "end": 45,
-    "text": "I open 1 depression and check its footprint and estimated volume up to the spill rim. The card shows that usable storage is still unknown and suitability is unassessed."
+    "end": 40,
+    "text": "The terrain screen finds low spots near Seondha. Select one to inspect its shape."
   },
   {
-    "start": 45,
-    "end": 55,
-    "text": "The cross-section shows where the terrain dips. Before relying on it, I’d ask a field team to survey the ground and check how water actually drains."
+    "start": 40,
+    "end": 52,
+    "text": "The card shows its footprint and a terrain-based volume estimate up to the spill rim. Field measurements are needed to establish usable storage."
   },
   {
-    "start": 55,
+    "start": 52,
+    "end": 62,
+    "text": "The cross-section shows the dip. A field team still needs to measure the outlet, check drainage and assess the site."
+  },
+  {
+    "start": 62,
     "end": 69,
-    "text": "I asked my AI agent to deploy TerraScope with Embarko and give me a public link. The agent built and deployed the prototype, so someone else can open the same map and inspect the evidence."
+    "text": "I built TerraScope with an AI agent and published it with Embarko."
   },
   {
     "start": 69,
     "end": 78,
-    "text": "Try TerraScope at the address on screen. Replay the dates, open a candidate, and see what you’d check in the field."
+    "text": "Try the live map at the address on screen. TerraScope. From a planning question to a place worth surveying."
   }
 ];

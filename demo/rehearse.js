@@ -14,7 +14,7 @@ let objectUrl;
 let intendedSeek = null;
 let seekInProgress = false;
 let frame;
-let loadedName = "terrascope-demo.mp4";
+let loadedName = "terrascope-submission.mp4";
 
 function validate(list) {
   if (!Array.isArray(list) || !list.length) throw new Error("Enter at least one cue.");

@@ -44,7 +44,7 @@
     }
     @media (max-width: 32rem) {
       /* Give native transport controls their own space beneath the landscape movie. */
-      video[src="terrascope-demo.mp4"] { aspect-ratio: 4 / 3; object-position: center top; }
+      video[src="terrascope-submission.mp4"] { aspect-ratio: 4 / 3; object-position: center top; }
     }
   </style>
   <script defer src="cues.js"></script>
@@ -56,8 +56,8 @@
     <p>The video waits at each cue. Choose Next when you finish speaking.</p>
     <div class="workspace">
       <section aria-label="Demo video">
-        <video id="video" controls playsinline preload="metadata" src="terrascope-demo.mp4" aria-label="TerraScope demo video"></video>
-        <p id="video-status" role="status">Looking for terrascope-demo.mp4…</p>
+        <video id="video" controls playsinline preload="metadata" src="terrascope-submission.mp4" aria-label="TerraScope demo video"></video>
+        <p id="video-status" role="status">Looking for terrascope-submission.mp4…</p>
         <div class="controls" role="group" aria-label="Cue controls">
           <button id="previous" aria-keyshortcuts="Alt+ArrowLeft">Previous</button>
           <button id="repeat" aria-keyshortcuts="Alt+R">Repeat cue</button>
@@ -98,7 +98,7 @@
         <label><input id="continuous" type="checkbox"> Continuous playback</label>
       </div>
       <p>The demo has on-screen captions and a synthetic preview voice. Mute the video to rehearse your own narration.</p>
-      <p><a href="terrascope-demo.vtt" download>Download timed captions</a> · <a href="script.md">Open the read-aloud script</a> · <a href="terrascope-clean.mp4" download>Download silent footage</a></p>
+      <p><a href="terrascope-submission.vtt" download>Download timed captions</a> · <a href="script.md">Open the read-aloud script</a> · <a href="terrascope-clean.mp4" download>Download silent footage</a></p>
       <label for="file">Choose a local video</label>
       <input id="file" type="file" accept="video/*,.mp4">
       <p class="help">Alt + Left or Right changes cues. Alt + R repeats a cue. Alt + P plays or pauses.</p>
@@ -106,7 +106,7 @@
     <details>
       <summary>Edit narration and timing</summary>
       <label for="editor">Cue list (JSON, times in seconds)</label>
-      <p class="help">Add your name to the introduction in cue 2. Use ascending, non-overlapping times. Apply edits for this session or download an updated cues.js to put beside this page.</p>
+      <p class="help">The current film includes AI narration. Use ascending, non-overlapping times. Apply edits for this session or download an updated cues.js to put beside this page.</p>
       <textarea id="editor" spellcheck="false"></textarea>
       <div class="controls">
         <button id="apply">Apply edits</button>

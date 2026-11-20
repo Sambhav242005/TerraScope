@@ -23,14 +23,14 @@ try {
   await page.goto(demoFile("rehearse.html").href);
   await expect(page.locator("#video-status")).toContainText("1:18");
   await page.locator("#video").evaluate((video) => { video.currentTime = 39; });
-  await expect(page.locator("#cue-status")).toContainText("Cue 5 of 8");
+  await expect(page.locator("#cue-status")).toContainText("Cue 4 of 8");
   await page.locator("#video").evaluate((video) => { video.currentTime = 0; });
   await expect(page.locator("#cue-status")).toContainText("Cue 1 of 8");
   await page.locator("#transcription summary").click();
   await page.locator("#mic-start").click();
   await expect(page.locator("#mic-status")).toContainText("Listening");
   await page.locator("#play").click();
-  await expect(page.locator("#cue-status")).toContainText(/Paused|Finish/i, { timeout: 8000 });
+  await expect(page.locator("#cue-status")).toContainText(/Paused|Finish/i, { timeout: 16000 });
 
   const finalChunks = [
     "Tera scope", // An unknown phrase must survive verbatim.
@@ -55,7 +55,7 @@ try {
   await page.locator("#video").evaluate(async (video) => {
     const restored = new Promise((resolve) => {
       video.addEventListener("seeked", function onSeeked() {
-        if (video.currentTime !== 3) return;
+        if (video.currentTime !== 12) return;
         video.removeEventListener("seeked", onSeeked);
         resolve();
       });
@@ -63,7 +63,7 @@ try {
     video.currentTime = 39;
     await restored;
   });
-  assert.equal(await page.locator("#video").evaluate((video) => video.currentTime), 3);
+  assert.equal(await page.locator("#video").evaluate((video) => video.currentTime), 12);
 
   const pendingDownload = page.waitForEvent("download");
   await page.locator("#download-transcript").click();
@@ -76,7 +76,7 @@ try {
   assert.deepEqual(errors, []);
 
   const native = await browser.newPage({ viewport: { width: 720, height: 405 } });
-  const sidecar = await readFile(demoFile("terrascope-demo.vtt"), "utf8");
+  const sidecar = await readFile(demoFile("terrascope-submission.vtt"), "utf8");
   await native.route("https://demo.test/**", (route) => {
     const routeName = new URL(route.request().url()).pathname;
     if (routeName === "/captions.vtt") return route.fulfill({ contentType: "text/vtt", body: sidecar });
@@ -103,13 +103,13 @@ try {
     video.playbackRate = 4;
     await video.play();
   });
-  await native.waitForFunction(() => document.querySelector("track").track.activeCues?.[0]?.startTime === 5.258);
+  await native.waitForFunction(() => document.querySelector("track").track.activeCues?.[0]?.startTime === 0.439);
   await native.locator("video").evaluate((video) => video.pause());
   const cues = await native.locator("track").evaluate(({ track }) => Array.from(track.cues, (cue) => ({
     start: cue.startTime, end: cue.endTime, line: cue.line,
     text: cue.text, active: track.activeCues[0]?.startTime === cue.startTime,
   })));
-  assert.equal(cues.length, 25);
+  assert.equal(cues.length, 20);
   let lastEnd = 0;
   for (const cue of cues) {
     assert.ok(cue.start >= lastEnd && cue.start < cue.end && cue.end <= 78);
@@ -118,7 +118,7 @@ try {
     const lines = cue.text.split("\n");
     assert.ok(lines.length <= 2 && lines.every((line) => [...line].length <= 40));
   }
-  assert.equal(cues.find((cue) => cue.active)?.text, "to explore that question\nalong Bihar’s Gandak River.");
+  assert.equal(cues.find((cue) => cue.active)?.text, "TerraScope helps planners\nchoose where to investigate.");
   const screenshot = await native.screenshot({ path: process.env.DEMO_CAPTION_SCREENSHOT });
   const rows = await native.evaluate(async (png) => {
     const img = new Image();

@@ -2507,7 +2507,7 @@ export default function App() {
         aria-label="Historical timeline"
         hidden={historyMode}
       >
-        {mapTarget && <p className="regional-history-status" role="status">Rainfall {historyStatus(regional.rain)} ? Flow {historyStatus(regional.flow)} ? UTC ? River match unverified <button onClick={() => { setPanel("River history"); setHistoryMode(false); }}>Source &amp; coverage</button></p>}
+        {mapTarget && <p className="regional-history-status" role="status">Rainfall {historyStatus(regional.rain)} · Flow {historyStatus(regional.flow)} · UTC · River match unverified <button onClick={() => { setPanel("River history"); setHistoryMode(false); }}>Source &amp; coverage</button></p>}
         <div className="timeline-top">
           <button
             className="play-button"
