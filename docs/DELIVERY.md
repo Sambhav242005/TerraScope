@@ -187,3 +187,9 @@ Primary API documentation was retrieved through Context7. Open-Meteo uses ERA5 0
 Modern Web Guidance `forms` shaped the labeled native date fields and explicit Load dates action, following “use native constraints” and “announce AJAX submission results”.
 
 Final checks for this slice passed 304 unit tests, the production build, the map action journey, the regional failure/cache/race/retry journey and the live MP provider journey. The production build retains its existing bundle-size advisory. Physical-phone performance and a public deployment of this connector remain outstanding.
+
+## Regional-history deployment — 20 November 2026
+
+Deployed application source from commit `2add59d1b413b34c73f59b514873c8596e4fffec` to https://terrascope-floods.embarko.app. Embarko reported `live` and deploy `success`; deployment ID `cmwp39cy800koxc32x5hvq1jj`, existing permanent app ID `cmwhn0bof01cc13ba9nuolom1`. Connector calls returned internal errors, so the release used Embarko's documented multipart upload API and the existing local credential. The source archive excluded private configuration and NRSC imagery.
+
+Verified the hosted product with `LIVE_HISTORY=1` and `DEMO_URL=https://terrascope-floods.embarko.app` using the regional-history browser check. Automatic MP rainfall/flow downloads, date changes, source cells/coverage, daily replay bounds and 360px width passed with no uncaught page errors. A separate browser open confirmed the persistent landscape UI and History control. River identity and physical-phone performance retain the limitations above.
