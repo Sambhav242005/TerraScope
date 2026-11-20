@@ -37,13 +37,14 @@ import {
   History,
 } from "lucide-react";
 import { AreaReviewPanel } from "./flood/areaReview/AreaReviewPanel";
-import { emptyGeometry, type AreaEvidenceCollection } from "./flood/areaReview/contracts";
+import { emptyGeometry, type AreaEvidenceCollection, type AreaReview } from "./flood/areaReview/contracts";
 import MapView from "./flood/MapView";
 import RiverHistory, { type HistoryFrame } from "./flood/RiverHistory";
 import ResultTimeline from "./flood/ResultTimeline";
 import EnsoContext from "./flood/EnsoContext";
 import Findings from "./flood/Findings";
 import DecisionDesk from "./flood/DecisionDesk";
+import { validatePlanningAction, type PlanningAction, type PlanningSnapshot } from "./flood/ai/planning";
 import { loadBasins, subBasinAt, toFeatureCollection, type BasinBundle } from "./flood/hydrobasins";
 import { computeCapacityRange, CAPACITY_RANGE_LABEL } from "./flood/storage/capacityRange";
 import { loadHistorySeries, type HistoryRow } from "./flood/historySeries";
@@ -390,6 +391,8 @@ export default function App() {
     [coordinatePlacement, setCoordinatePlacement] = useState(false),
     [placementLat, setPlacementLat] = useState("25.71"),
     [placementLon, setPlacementLon] = useState("85.16");
+  const [areaReview, setAreaReview] = useState<AreaReview | null>(null);
+  const [evidenceSelection, setEvidenceSelection] = useState<{ id: string } | null>(null);
   const [areaGeometry, setAreaGeometry] = useState<AreaEvidenceCollection>(emptyGeometry);
   const [historyFrame, setHistoryFrame] = useState<HistoryFrame | null>(null);
   const [historyMode, setHistoryMode] = useState(false);
@@ -824,6 +827,25 @@ export default function App() {
         : [],
     [storageRun],
   );
+  const replayDate = historyMode && historyFrame ? historyFrame.date : days[day];
+  const currentAreaReview = areaReview?.latitude === saved.area.lat && areaReview.longitude === saved.area.lon ? areaReview : null;
+  const revision = useMemo(() => crypto.getRandomValues(new Uint32Array(4)).join("-"), [
+    saved.area.lat, saved.area.lon, replayDate, historyMode, storageRun, storageWater, storageBusy,
+    currentAreaReview, historyRows, manifest, proposalItems, placementReview.state,
+    placementReview.loadedAreaKey, placementReview.evidence,
+  ]);
+  const currentScreen = !storageBusy && storageRun?.status === "succeeded" &&
+    distanceKm(storageRun.config.center, saved.area) * 1000 < 500 ? storageRun : null;
+  const planningSnapshot: PlanningSnapshot = {
+    revision,
+    runId: currentScreen?.id ?? null,
+    candidateIds: currentScreen?.candidates.map(candidate => candidate.id) ?? [],
+    proposalIds: proposalItems.map(item => item.id),
+    evidenceIds: currentAreaReview
+      ? [...currentAreaReview.reports.map(report => report.id), ...(currentAreaReview.air ? [currentAreaReview.air.id] : [])]
+      : [],
+  };
+
   const inspected =
     storageRun?.candidates.find((c) => c.id === selectedStorage) ?? null;
   const basinFC = useMemo(() => (basins ? toFeatureCollection(basins) : null), [basins]);
@@ -992,7 +1014,7 @@ export default function App() {
     );
   }
 
-  function handleAdoptCandidate(candidate: StoredCandidate) {
+  function handleAdoptCandidate(candidate: StoredCandidate, requireCurrentEvidence = false) {
     const item = createIntervention(
       "storage_basin",
       { lat: candidate.centroid[1], lon: candidate.centroid[0] },
@@ -1006,11 +1028,55 @@ export default function App() {
         notes: `Adopted from Priority-Flood candidate #${candidate.id}. Spill elevation: ${candidate.spillElevationM.toFixed(1)} m. Footprint: ${candidate.footprintAreaM2.toLocaleString()} m². Available storage requires bathymetric verification.`,
       },
     );
+    if (requireCurrentEvidence) {
+      if (pendingPlacement.current) throw new Error("A placement is already being checked.");
+      if (placementReview.state !== "ready" || placementReview.loadedAreaKey !== placementAreaKey(saved.area)) {
+        throw new Error("Current area placement checks are unavailable. Try again when they finish.");
+      }
+      const { block } = assessPlacement(item, placementReview.evidence, proposalItems);
+      if (block) throw new Error(block);
+      commitPlacement(item, `Adopted candidate #${candidate.id} as a planned storage basin.`);
+      return;
+    }
     submitPlacement(
       item,
       { lat: candidate.centroid[1], lon: candidate.centroid[0] },
       `Adopted candidate #${candidate.id} as a planned storage basin (${item.capacityM3?.toLocaleString()} m³ geometric capacity).`,
     );
+  }
+
+  function applyPlanningAction(proposal: PlanningAction): string {
+    const action = validatePlanningAction(proposal, planningSnapshot);
+    switch (action.kind) {
+      case "focus-candidate":
+      case "adopt-candidate": {
+        const candidate = currentScreen?.candidates.find(item => item.id === action.candidateId);
+        if (!candidate) throw new Error("Candidate is unavailable.");
+        if (action.kind === "adopt-candidate") {
+          handleAdoptCandidate(candidate, true);
+          setShowInterventions(true);
+          return `Added planned storage basin for candidate #${candidate.id}.`;
+        }
+        setSelected(null);
+        setSelectedIntervention(null);
+        setSelectedStorage(candidate.id);
+        setShowCandidates(true);
+        setPanel("Explore");
+        focusPlacement({ lat: candidate.centroid[1], lon: candidate.centroid[0] });
+        return `Focused storage candidate #${candidate.id}.`;
+      }
+      case "remove-proposal":
+        handleDeleteIntervention(action.proposalId);
+        return "Removed the proposal.";
+      case "undo":
+        if (!proposalItems.length) throw new Error("There is no placement to undo.");
+        handleUndoIntervention();
+        return "Undid the last placement.";
+      case "show-evidence":
+        setEvidenceSelection({ id: action.evidenceId });
+        setPanel("Environment");
+        return "Opened the selected evidence.";
+    }
   }
 
   function handleDeleteIntervention(id: string) {
@@ -1567,7 +1633,7 @@ export default function App() {
           <div hidden={panel !== "River history"}>
             <RiverHistory onMap={closePanel} onSources={() => setSources(true)} onFrame={setHistoryFrame} active={panel === "River history"} />
           </div>
-          <div hidden={panel !== "Environment"}><AreaReviewPanel latitude={saved.area.lat} longitude={saved.area.lon} onGeometryChange={setAreaGeometry} /></div>
+          <div hidden={panel !== "Environment"}><AreaReviewPanel latitude={saved.area.lat} longitude={saved.area.lon} onGeometryChange={setAreaGeometry} onReviewChange={setAreaReview} evidenceSelection={evidenceSelection} active={panel === "Environment"} /></div>
           <div hidden={panel === "River history" || panel === "Environment"}>
           <div className="panel-top">
             <span className="eyebrow">
@@ -2843,8 +2909,12 @@ export default function App() {
             ensoYear: 2024,
             storageRun,
             proposalCount: (saved.interventions ?? []).length,
-            replayDate: historyMode && historyFrame ? historyFrame.date : days[day],
+            replayDate,
+            workspaceRevision: revision,
+            areaReview: currentAreaReview ? { revision, review: currentAreaReview } : undefined,
           }}
+          planningSnapshot={planningSnapshot}
+          onApplyPlanningAction={applyPlanningAction}
           onClose={closeDecisionDesk}
         />
       </div>

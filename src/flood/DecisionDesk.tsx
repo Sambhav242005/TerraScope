@@ -40,6 +40,8 @@ import {
   type LocalModelConfig,
 } from "./ai/llmAdapter";
 import type { DecisionContext, EvidenceCitation } from "./ai/tools";
+import { LOCAL_MODEL_PRESET } from "./ai/localPreset";
+import { askPlanningAction, type PlanningAction, type PlanningSnapshot } from "./ai/planning";
 
 type DeskMessage = {
   role: "user" | "assistant";
@@ -58,15 +60,15 @@ function loadConfig(): LocalModelConfig {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<LocalModelConfig>;
       return {
-        baseUrl: String(parsed.baseUrl ?? "http://127.0.0.1:11434"),
-        model: String(parsed.model ?? ""),
+        baseUrl: String(parsed.baseUrl ?? LOCAL_MODEL_PRESET.baseUrl),
+        model: String(parsed.model ?? LOCAL_MODEL_PRESET.model),
         apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",
       };
     }
   } catch {
     // corrupted config → defaults
   }
-  return { baseUrl: "http://127.0.0.1:11434", model: "", apiKey: "" };
+  return { ...LOCAL_MODEL_PRESET };
 }
 
 function isLocalHost(baseUrl: string): boolean {
@@ -104,11 +106,44 @@ const QUICK_PROMPTS = [
   "What does the evidence support for a pre-monsoon brief?",
 ];
 
+function describeAction(action: PlanningAction, snapshot: PlanningSnapshot): string {
+  switch (action.kind) {
+    case "focus-candidate": return `Focus storage candidate #${action.candidateId}`;
+    case "adopt-candidate": return `Add a planned basin for candidate #${action.candidateId}`;
+    case "remove-proposal": return `Remove proposal ${action.proposalId}`;
+    case "show-evidence": return `Open evidence ${action.evidenceId}`;
+    case "undo": return `Undo last placement (${snapshot.proposalIds.at(-1) ?? "none"})`;
+  }
+}
+
+// Require explicit intent before inference, and compare it with the returned
+// action. A schema-valid action can still be unrelated to the user's request.
+function requestedAction(question: string): string | null {
+  const command = question.trim().replace(/[.!?]$/, "");
+  if (/^undo(?: the)? last placement$/i.test(command)) return "undo";
+  const match = /^(focus candidate|adopt candidate|remove proposal|show evidence) #?([\w-]+)$/i.exec(command);
+  return match ? `${match[1].toLowerCase().replace(" ", "-")} ${match[2]}` : null;
+}
+
+function actionIntent(action: PlanningAction): string {
+  switch (action.kind) {
+    case "focus-candidate":
+    case "adopt-candidate": return `${action.kind} ${action.candidateId}`;
+    case "remove-proposal": return `${action.kind} ${action.proposalId}`;
+    case "show-evidence": return `${action.kind} ${action.evidenceId}`;
+    case "undo": return action.kind;
+  }
+}
+
 export default function DecisionDesk({
   context,
+  planningSnapshot,
+  onApplyPlanningAction,
   onClose,
 }: {
   context: DecisionContext;
+  planningSnapshot: PlanningSnapshot;
+  onApplyPlanningAction: (action: PlanningAction) => string;
   onClose: () => void;
 }) {
   const [messages, setMessages] = useState<DeskMessage[]>(() => [
@@ -119,6 +154,8 @@ export default function DecisionDesk({
       citations: [{ id: "protocol", detail: "decision support only; nothing is sent, posted or authorised by this app" }],
     },
   ]);
+  const [action, setAction] = useState<PlanningAction | null>(null);
+  const [actionStatus, setActionStatus] = useState("");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [config, setConfig] = useState<LocalModelConfig>(() => loadConfig());
@@ -145,6 +182,49 @@ export default function DecisionDesk({
   const modelConfigured = config.model.trim().length > 0;
   const localActive = probe === "ok" && modelConfigured;
   const cloudEndpoint = modelConfigured && !isLocalHost(config.baseUrl);
+  const planningEnabled = localActive && config.baseUrl === LOCAL_MODEL_PRESET.baseUrl &&
+    config.model === LOCAL_MODEL_PRESET.model && !config.apiKey;
+  const actionStale = action !== null && action.revision !== planningSnapshot.revision;
+
+  const proposeAction = async () => {
+    if (!planningEnabled || busy || !input.trim()) return;
+    setAction(null);
+    const intent = requestedAction(input);
+    if (!intent) {
+      setActionStatus("Unsupported action. Use a listed map command and its exact ID.");
+      return;
+    }
+    setBusy(true);
+    setActionStatus("Checking the requested map action?");
+    try {
+      const proposal = await askPlanningAction(LOCAL_MODEL_PRESET, input.trim(), planningSnapshot);
+      if (actionIntent(proposal) !== intent) throw new Error("The proposed action did not match your request.");
+      setAction(proposal);
+      setActionStatus("Map action ready for confirmation.");
+    } catch (error) {
+      setActionStatus(error instanceof Error ? error.message : "No supported map action was proposed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyAction = () => {
+    if (!action || !planningEnabled || busy) return;
+    setAction(null);
+    try {
+      setActionStatus(onApplyPlanningAction(action));
+    } catch (error) {
+      setActionStatus(error instanceof Error ? error.message : "The map action could not be applied.");
+    }
+  };
+
+  const changeConfig = (next: LocalModelConfig) => {
+    setConfig(next);
+    setProbe("idle");
+    setProbeDetail("");
+    setAction(null);
+    setActionStatus("");
+  };
 
   const send = async (rawQuestion: string) => {
     const question = rawQuestion.trim();
@@ -194,12 +274,24 @@ export default function DecisionDesk({
     saveConfig(config);
     setProbe("checking");
     setProbeDetail("");
+    const loopback = isLocalHost(config.baseUrl);
+    if (loopback) {
+      // Browsers that have no granular permission descriptor still enforce their network policy.
+      const permission = await navigator.permissions?.query({ name: "loopback-network" as PermissionName }).catch(() => null);
+      if (permission?.state === "denied") {
+        setProbe("fail");
+        setProbeDetail("Allow local-network access for this site in browser settings, then check again.");
+        return;
+      }
+    }
     const result = await probeLocalModel(config);
     setProbe(result.ok ? "ok" : "fail");
     setProbeDetail(
       result.ok
         ? `${result.detail}${result.latencyMs != null ? ` · ${result.latencyMs} ms` : ""}`
-        : result.detail,
+        : loopback
+          ? `${result.detail}. Check the same-device server and browser local-network access. On a hosted page, the server must allow this exact site origin. You can also open the local TerraScope UI on this device.`
+          : result.detail,
     );
   };
 
@@ -315,18 +407,46 @@ export default function DecisionDesk({
         </button>
       </form>
 
+      <div className="desk-config desk-planning">
+        <button type="button" onClick={() => void proposeAction()} disabled={!planningEnabled || busy || !input.trim()}>
+          Propose map action
+        </button>
+        <p className="desk-config-note">{planningEnabled
+          ? "Commands: Focus candidate ID, Adopt candidate ID, Remove proposal ID, Undo last placement, or Show evidence ID."
+          : "Connect the local planning preset to propose a map action."}</p>
+        {planningEnabled && (
+          <details className="desk-planning-targets">
+            <summary>Available map IDs</summary>
+            <dl>
+              <dt>Candidates</dt><dd>{planningSnapshot.candidateIds.join(", ") || "None"}</dd>
+              <dt>Proposals</dt><dd>{planningSnapshot.proposalIds.join(", ") || "None"}</dd>
+              <dt>Evidence</dt><dd>{planningSnapshot.evidenceIds.join(", ") || "None"}</dd>
+            </dl>
+          </details>
+        )}
+        {action && (
+          <div>
+            <p>{describeAction(action, planningSnapshot)}</p>
+            <button type="button" onClick={applyAction} disabled={actionStale || busy}>Apply map action</button>{" "}
+            <button type="button" onClick={() => { setAction(null); setActionStatus(""); }}>Dismiss proposal</button>
+          </div>
+        )}
+        <p className="desk-probe-detail" role="status">{actionStale ? "The workspace changed. Request a new map action." : actionStatus}</p>
+      </div>
+
       <details className="desk-config">
-        <summary>Local model (optional) — bring your own</summary>
-        <button type="button" className="desk-preset" onClick={() => { setConfig({ ...config, baseUrl: "https://api.groq.com/openai/v1", model: "qwen/qwen3.8-27b" }); setProbe("idle"); setProbeDetail(""); }}>
-          Groq preset: qwen/qwen3.8-27b
+        <summary>Model connection</summary>
+        <button type="button" className="desk-preset" disabled={busy || probe === "checking"} onClick={() => changeConfig({ ...LOCAL_MODEL_PRESET })}>
+          Use local planning preset ({LOCAL_MODEL_PRESET.model})
         </button>
         <label>
           Base URL
           <input
             type="url"
             value={config.baseUrl}
-            onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
-            placeholder="http://127.0.0.1:11434"
+            onChange={(e) => changeConfig({ ...config, baseUrl: e.target.value })}
+            disabled={busy || probe === "checking"}
+            placeholder={LOCAL_MODEL_PRESET.baseUrl}
             aria-label="Local model base URL"
           />
         </label>
@@ -335,7 +455,8 @@ export default function DecisionDesk({
           <input
             type="text"
             value={config.model}
-            onChange={(e) => { setConfig({ ...config, model: e.target.value }); setProbe("idle"); }}
+            onChange={(e) => changeConfig({ ...config, model: e.target.value })}
+            disabled={busy || probe === "checking"}
             placeholder="e.g. qwen/qwen3.8-27b (Groq) or qwen2.5:7b (Ollama)"
             aria-label="Local model name"
           />
@@ -345,13 +466,14 @@ export default function DecisionDesk({
           <input
             type="password"
             value={config.apiKey ?? ""}
-            onChange={(e) => { setConfig({ ...config, apiKey: e.target.value }); setProbe("idle"); }}
+            onChange={(e) => changeConfig({ ...config, apiKey: e.target.value })}
+            disabled={busy || probe === "checking"}
             placeholder="Only if your endpoint requires one (e.g. Groq)"
             aria-label="API key for the model endpoint"
             autoComplete="off"
           />
         </label>
-        <button type="button" onClick={() => void checkConnection()} disabled={probe === "checking" || !modelConfigured}>
+        <button type="button" onClick={() => void checkConnection()} disabled={busy || probe === "checking" || !modelConfigured}>
           {probe === "checking" ? <Loader2 size={13} className="spin" aria-hidden="true" /> : null}
           {probe === "checking" ? "Checking…" : "Check connection"}
         </button>
@@ -361,7 +483,8 @@ export default function DecisionDesk({
           </p>
         )}
         <p className="desk-config-note">
-          Any OpenAI-compatible endpoint works (Ollama at 127.0.0.1:11434, llama.cpp server, LM Studio — or cloud such as Groq). The model gets the same workspace tools as the offline responder: it can call them, never invent numbers, and never send anything. If the base URL is not this machine’s localhost (e.g. Groq), your questions and workspace snippets are sent there and it is labelled cloud — not local AI. Keys are stored only in this browser’s localStorage; they are never committed to the repository. Without a reachable model, answers use deterministic evidence. Free-tier Groq can be over capacity or rate-limited; when the model fails, the answer falls back to deterministic evidence and says so.
+          The planning preset uses {LOCAL_MODEL_PRESET.model} on this device at {LOCAL_MODEL_PRESET.baseUrl}.
+          Questions sent to a custom cloud endpoint leave this device. Evidence answers fall back to the deterministic responder when inference fails.
         </p>
       </details>
 

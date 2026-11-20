@@ -17,7 +17,7 @@ R01–R18 remain active; R19–R21 add scope. Evidence: `docs/research/area-envi
 
 Audience clarified by the user: general government staff turning an idea into a visible, explainable geographic plan. Requested local model: Ollama `lfm3:1.7b`; suitability remains unmeasured. Plan first: [visual planning implementation plan](docs/VISUAL_PLANNING_PLAN.md). All R01-R18 remain active; the steps below sequence existing scope and do not claim delivery.
 
-- [ ] R02/R12/R17: Benchmark the requested real local model and verify the hosted/local UI connection path; use bounded, independently checked tool operations.
+- [ ] R02/R12/R17: Benchmark the requested real local model and verify the hosted/local UI connection path; use bounded, independently checked tool operations. Local Edge verification passed with the requested model and confirmed map actions against a controlled screening/placement fixture. Hosted verification and broader agent workflow remain open. See [checked local map actions](docs/DELIVERY.md#checked-local-map-actions-r02r06r12r17).
 - [ ] R01/R10/R13: Consolidate the persistent map, conversation, contextual controls and timeline; verify a visual journey without work-tab navigation.
 - [ ] R02/R03/R06/R11/R12/R15/R16/R17: Connect intent and retrieval to automatic candidates, reversible visible edits, evidence highlighting and durable jobs.
 - [ ] R03/R04/R05/R07/R08/R09/R10/R11/R13: Connect supported effects through versioned model contracts and validation; show honest visual comparisons and specific unavailable-input states.

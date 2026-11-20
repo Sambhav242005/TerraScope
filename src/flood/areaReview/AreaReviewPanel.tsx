@@ -52,7 +52,9 @@ export function AreaReviewPanel({ latitude, longitude, onGeometryChange, onRevie
         if (sample?.status === 'available') {
           const remaining = Date.parse(sample.validTime) + 3 * 3600000 + 1 - Date.now();
           expiry = setTimeout(() => {
-            setReview({ ...result, air: { ...sample, status: 'stale' } });
+            const staleReview: AreaReview = { ...result, air: { ...sample, status: 'stale' } };
+            setReview(staleReview);
+            onReviewChange?.(staleReview);
             callback.current?.(emptyGeometry());
           }, Math.max(0, remaining));
         }

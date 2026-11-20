@@ -36,6 +36,10 @@
 .desk-config input { border: 1px solid #cfd8cc; border-radius: 6px; padding: 6px 8px; }
 .desk-config button { margin-top: 8px; border: 1px solid #2c7056; color: #1e5a3a; border-radius: 6px; padding: 5px 10px; font-size: 12px; }
 .desk-preset { border: 1px solid #254a36 !important; background: #254a36 !important; color: #f2f7f1 !important; margin-top: 0 !important; margin-bottom: 2px; }
+.desk-planning-targets { margin-top: 6px; }
+.desk-planning-targets dl { max-height: 6rem; overflow: auto; overflow-wrap: anywhere; margin: 4px 0 0; }
+.desk-planning-targets dt { font-weight: 600; }
+.desk-planning-targets dd { margin: 0 0 4px; }
 .desk-probe-detail { margin: 6px 0 0; font-size: 11px; }
 .desk-probe-ok { color: #1e6b3a; }
 .desk-probe-fail { color: #8a3a1e; }
