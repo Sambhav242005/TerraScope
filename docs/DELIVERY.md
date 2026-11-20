@@ -163,3 +163,9 @@ The map context panel and storage candidate card scroll at up to 45% of viewport
 `node tests/demo-rehearsal-check.mjs` verified native seeking, cue hold on an overrun, Next, display and download of recognized text, and native WebVTT placement with the controls visible. Recognition used simulated events. Physical microphone recognition and phone playback remain unverified. The planning journey, 297 unit tests and production build passed. The build retains its existing bundle-size advisory.
 
 Modern Web Guidance guides `responsive-design`, `css-layout` and `accessibility` informed aspect-ratio preservation in the rehearsal player, viewport-relative card scrolling and synchronized captions.
+
+## Standalone narrated challenge film (R03/R10/R14)
+
+[TerraScope submission MP4](../demo/terrascope-submission.mp4) pairs the verified public-app recording with a new third-person script spoken by Microsoft Heera, an Indian English synthetic voice. All 18 captions are burned into the video and are also available as [timed text](../demo/terrascope-submission.vtt). The speaker describes the Gandak historical replay, the candidate's unknown usable storage and the reconstructed Embarko deployment prompt.
+
+The 78-second, 1920 × 1080 file contains H.264 video and a default English AAC track. Decoding the final MP4 verified audible speech in every cue and integrated loudness of −16.03 LUFS. Encoded frame checks confirmed the caption safe zone for all 18 cues. Six scenes were visually inspected.

@@ -1,5 +1,7 @@
 # TerraScope challenge video
 
+**[Play or download the standalone narrated film](../demo/terrascope-submission.mp4).** This 78-second edition includes its own English narration and on-screen captions. It plays directly in a video player. [Timed transcript for this edition](../demo/terrascope-submission.vtt).
+
 The 78-second demo follows a planner reviewing the Gandak replay, inspecting a possible storage site near Sonepur and deciding what a field team should measure. The last scene reconstructs the deployment prompt and shows the public URL. Use the [read-aloud script](../demo/script.md) and [timed captions](../demo/terrascope-demo.vtt) for the exact words. The [rehearsal page](../demo/rehearse.html) plays the cut and holds at each cue until the speaker advances.
 
 ## Brief for the subtitle and transcription agent
