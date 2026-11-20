@@ -1,5 +1,7 @@
 # TerraScope challenge video
 
+The posting editions are [LinkedIn, 78 seconds in landscape](../demo/terrascope-linkedin.mp4) and [Instagram Reels, 45 seconds in portrait](../demo/terrascope-reel.mp4). Both include narration and quiet original background music. The LinkedIn closing says “Link in the description”; the Reel says “Link in bio”. [Post captions and the bio URL](../demo/social-posts.md) accompany the exports. Set the Instagram website link before using that caption.
+
 **[Play or download the standalone narrated film](../demo/terrascope-submission.mp4).** This 78-second edition includes its own English narration and on-screen captions. It plays directly in a video player. [Timed transcript for this edition](../demo/terrascope-submission.vtt).
 
 ## Current MP film
