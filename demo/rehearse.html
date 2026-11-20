@@ -52,6 +52,8 @@
         <h2 id="video-title">Demo video</h2>
         <video id="video" controls playsinline preload="metadata" src="terrascope-demo.mp4" aria-label="TerraScope demo video"></video>
         <p id="video-status" role="status">Looking for terrascope-demo.mp4…</p>
+        <p class="help">The demo has fixed on-screen captions and a synthetic preview voice. Use the player’s mute control when rehearsing your own narration.</p>
+        <p><a href="terrascope-demo.vtt" download>Download timed captions</a> · <a href="script.md">Open the read-aloud script</a> · <a href="terrascope-clean.mp4" download>Download footage for your own voiceover</a></p>
         <label for="file">Choose a local video</label>
         <input id="file" type="file" accept="video/*,.mp4">
         <div class="controls" role="group" aria-label="Cue controls">
@@ -80,7 +82,7 @@
     <details>
       <summary>Edit narration and timing</summary>
       <label for="editor">Cue list (JSON, times in seconds)</label>
-      <p class="help">Use ascending, non-overlapping times. Apply edits for this session or download an updated cues.js to put beside this page.</p>
+      <p class="help">Add your name to the introduction in cue 2. Use ascending, non-overlapping times. Apply edits for this session or download an updated cues.js to put beside this page.</p>
       <textarea id="editor" spellcheck="false"></textarea>
       <div class="controls">
         <button id="apply">Apply edits</button>
@@ -90,6 +92,7 @@
     </details>
     <details id="transcription">
       <summary>Optional live microphone transcription</summary>
+      <p>This panel transcribes the words you say into your microphone. The video captions follow the recorded narration.</p>
       <p>Start listening only if you want live text while you speak. Your browser may send microphone audio to its recognition service and may require internet access or block recognition on local files. The page itself has no upload service.</p>
       <p>Use Previous, Repeat and Next to pace yourself at any time. Transcription never advances cues. Text stays in this page until you close or reload it, or choose Download transcript.</p>
       <div class="controls">

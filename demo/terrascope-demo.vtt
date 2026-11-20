@@ -1,0 +1,57 @@
+WEBVTT
+
+00:00:00.250 --> 00:00:02.034
+Where could floodwater go?
+
+00:00:03.250 --> 00:00:08.308
+I’m a student, and I built TerraScope to explore
+that question along Bihar’s Gandak River.
+
+00:00:10.250 --> 00:00:13.734
+I scrub from September twenty-eighth to October
+second.
+
+00:00:13.974 --> 00:00:21.717
+ERA5 reconstructs rainfall. GloFAS models river
+flow. The landscape stays fixed as the readings
+change.
+
+00:00:23.250 --> 00:00:27.469
+In Explore, the terrain screen flags low spots
+near Sonpur.
+
+00:00:27.709 --> 00:00:32.447
+A field team can use this list to decide where to
+survey for temporary water storage.
+
+00:00:33.250 --> 00:00:37.774
+I open one depression and check its footprint and
+estimated volume up to the spill rim.
+
+00:00:38.014 --> 00:00:42.567
+The card shows that usable storage is still
+unknown and suitability is unassessed.
+
+00:00:45.250 --> 00:00:48.374
+The cross-section shows where the terrain dips.
+
+00:00:48.614 --> 00:00:54.287
+Before relying on it, I’d ask a field team to
+survey the ground and check how water actually
+drains.
+
+00:00:55.250 --> 00:01:00.034
+I asked my AI agent to deploy TerraScope with
+Embarko and give me a public link.
+
+00:01:00.274 --> 00:01:06.072
+The agent built and deployed the prototype, so
+someone else can open the same map and inspect
+the evidence.
+
+00:01:09.250 --> 00:01:12.024
+Try TerraScope at the address on screen.
+
+00:01:12.264 --> 00:01:16.798
+Replay the dates, open a candidate, and see what
+you’d check in the field.
