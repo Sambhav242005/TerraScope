@@ -1,69 +1,72 @@
 WEBVTT
 
-00:00:00.320 --> 00:00:01.910 line:73% position:50% size:80% align:center
-Where could floodwater go?
+00:00:00.460 --> 00:00:03.485 line:73% position:50% size:80% align:center
+Where could floodwater go along
+the Gandak River in Bihar?
 
-00:00:03.300 --> 00:00:06.450 line:73% position:50% size:80% align:center
-TerraScope follows the Gandak River
-in Bihar.
+00:00:04.766 --> 00:00:07.817 line:73% position:50% size:80% align:center
+TerraScope lets us look
+for places worth surveying.
 
-00:00:06.700 --> 00:00:10.132 line:73% position:50% size:80% align:center
-A planner can replay a storm,
-then pick a place to survey.
+00:00:10.399 --> 00:00:14.083 line:73% position:50% size:80% align:center
+First, let's go back
+to September 28, 2024.
 
-00:00:10.400 --> 00:00:13.836 line:73% position:50% size:80% align:center
-The replay starts on 28 September 2024.
+00:00:14.782 --> 00:00:18.056 line:73% position:50% size:80% align:center
+By October 2, the modeled
+river flow has changed.
 
-00:00:14.100 --> 00:00:17.680 line:73% position:50% size:80% align:center
-Watch the river reading change
-by 2 October.
+00:00:18.754 --> 00:00:22.800 line:73% position:50% size:80% align:center
+The replay lets you follow rainfall
+and river flow side by side.
 
-00:00:18.300 --> 00:00:23.029 line:73% position:50% size:80% align:center
-ERA5 reconstructs rainfall.
-GLOFAS models river flow.
+00:00:23.460 --> 00:00:25.206 line:73% position:50% size:80% align:center
+Now let’s zoom in near Sonepur.
 
-00:00:23.300 --> 00:00:27.620 line:73% position:50% size:80% align:center
-Near Sonepur, the map flags low spots
-in the terrain.
+00:00:25.906 --> 00:00:28.805 line:73% position:50% size:80% align:center
+The map picks out low spots
+in the surrounding terrain.
 
-00:00:28.100 --> 00:00:31.540 line:73% position:50% size:80% align:center
-Each one gives a field team
-a place to investigate.
+00:00:29.505 --> 00:00:31.798 line:73% position:50% size:80% align:center
+Those give a field
+team a place to start.
 
-00:00:33.300 --> 00:00:36.010 line:73% position:50% size:80% align:center
-Open a candidate to see its footprint.
+00:00:33.460 --> 00:00:36.080 line:73% position:50% size:80% align:center
+Open a candidate and you
+can see its footprint.
 
-00:00:37.200 --> 00:00:40.320 line:73% position:50% size:80% align:center
-The estimate is the volume
-up to the spill rim.
+00:00:36.780 --> 00:00:40.273 line:73% position:50% size:80% align:center
+The map estimates how much water
+would fill it up to the spill rim.
 
-00:00:41.000 --> 00:00:44.670 line:73% position:50% size:80% align:center
-How much water it can actually hold
-is still unknown.
+00:00:40.973 --> 00:00:43.774 line:73% position:50% size:80% align:center
+How much could actually be
+stored there is still unknown.
 
-00:00:45.300 --> 00:00:48.330 line:73% position:50% size:80% align:center
-This cross-section shows the dip
-and its rim.
+00:00:45.460 --> 00:00:48.879 line:73% position:50% size:80% align:center
+The terrain profile shows the dip
+and where water might spill.
 
-00:00:49.700 --> 00:00:54.050 line:73% position:50% size:80% align:center
-A ground survey can check the outlet
-and how the site drains.
+00:00:49.579 --> 00:00:53.448 line:73% position:50% size:80% align:center
+A field team can use it to plan where
+to check the outlet and drainage.
 
-00:00:55.400 --> 00:01:00.929 line:73% position:50% size:80% align:center
-The student behind TerraScope asked
-an AI agent to deploy it with Embarko.
+00:00:55.460 --> 00:00:59.563 line:73% position:50% size:80% align:center
+A student built TerraScope and
+asked an AI agent to publish it.
 
-00:01:01.200 --> 00:01:04.060 line:73% position:50% size:80% align:center
-The prompt shown here
+00:01:00.263 --> 00:01:02.645 line:73% position:50% size:80% align:center
+The prompt you see here
 is a reconstruction.
 
-00:01:05.000 --> 00:01:06.910 line:73% position:50% size:80% align:center
-The result is a public link.
+00:01:03.345 --> 00:01:07.513 line:73% position:50% size:80% align:center
+The agent deployed the app with Embarko,
+so anyone can open the map.
 
-00:01:09.400 --> 00:01:12.450 line:73% position:50% size:80% align:center
-Open TerraScope at the address
-on screen.
+00:01:09.460 --> 00:01:12.130 line:73% position:50% size:80% align:center
+You can try TerraScope
+at the address on screen.
 
-00:01:13.400 --> 00:01:17.010 line:73% position:50% size:80% align:center
-Replay the storm and choose a site
-to investigate.
+00:01:12.830 --> 00:01:16.498 line:73% position:50% size:80% align:center
+Replay the storm and pick a site
+you'd want to look at more closely.
